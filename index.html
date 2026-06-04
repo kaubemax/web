@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Max Kaube | Creative Developer</title>
+<style>
+/* --- Design System --- */
+:root {
+    --bg-color: #000000; /* Pure black background */
+    --text-color: #EAEAEA;
+    --text-color-secondary: #A0A0A5;
+    --accent-color: #FFFFFF;
+    --border-color: #282828;
+    --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-family-serif: 'Georgia', 'Times New Roman', serif;
+}
+
+/* --- LOCAL FONT SETUP --- */
+/* inter-regular - latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  src: local(''),
+       url('./fonts/inter-v19-latin-regular.woff2') format('woff2');
+}
+/* inter-500 - latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  src: local(''),
+       url('./fonts/inter-v19-latin-500.woff2') format('woff2');
+}
+/* inter-700 - latin */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  src: local(''),
+       url('./fonts/inter-v19-latin-700.woff2') format('woff2');
+}
+
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family-sans);
+    overscroll-behavior: none;
+}
+
+/* MOBILE-READY: Added class to prevent scrolling when mobile nav is open */
+body.nav-open {
+    overflow: hidden;
+}
+
+
+/* --- 3D Minigame Canvas --- */
+#bg-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    cursor: grab;
+}
+#bg {
+    width: 100%;
+    height: 100%;
+}
+
+/* --- Navigation Header --- */
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 2rem 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0; /* Initially hidden */
+    pointer-events: none; /* Initially non-interactive */
+    transition: opacity 1.5s ease 0.5s;
+}
+header.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    text-decoration: none;
+    z-index: 1001; /* MOBILE-READY: Ensure logo is above mobile nav */
+}
+
+nav a {
+    color: var(--text-color-secondary);
+    text-decoration: none;
+    margin-left: 3rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+nav a:hover, nav a.active {
+    color: var(--text-color);
+}
+
+/* --- Main Content & Sections --- */
+main {
+    isolation: isolate;
+}
+.content-wrapper {
+    position: relative;
+    z-index: 2;
+    background-color: var(--bg-color);
+    opacity: 0; /* Initially hidden */
+    pointer-events: none; /* Initially non-interactive */
+    transition: opacity 1.5s ease 0.5s;
+}
+.content-wrapper.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+section {
+    padding: 8rem 10%;
+    min-height: 100vh;
+    border-bottom: 1px solid var(--border-color);
+}
+.reveal {
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 1s ease-out, transform 1s ease-out;
+}
+.reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* --- Hero Section (Minigame Intro) --- */
+#hero {
+    height: 100vh;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    background: transparent;
+    text-align: center;
+    border-bottom: none;
+}
+
+#hero-content {
+    z-index: 10;
+    pointer-events: none;
+}
+
+#hero h1 {
+    font-family: var(--font-family-serif);
+    font-size: clamp(3rem, 10vw, 7rem); /* Slightly smaller */
+    font-weight: 400;
+    line-height: 1.1;
+    color: #fff;
+}
+#hero h1 span {
+    color: var(--accent-color);
+}
+
+#hero p {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    font-weight: 400;
+    max-width: 550px;
+    margin: 1.5rem auto 0;
+    color: var(--text-color-secondary);
+}
+#game-prompt {
+    margin-top: 3rem;
+    font-weight: 500;
+    color: #fff;
+    padding: 0.8rem 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    background: rgba(25, 25, 25, 0.5);
+    backdrop-filter: blur(5px);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    pointer-events: all;
+}
+#game-prompt:hover {
+    background: var(--accent-color);
+    color: var(--bg-color);
+    border-color: var(--accent-color);
+}
+
+#scroll-prompt {
+    position: absolute;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-color-secondary);
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 1s ease 0.5s;
+    animation: bounce 2s infinite ease-in-out;
+    pointer-events: none;
+}
+#scroll-prompt.visible {
+    opacity: 1;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translate(-50%, 0); }
+    40% { transform: translate(-50%, -15px); }
+    60% { transform: translate(-50%, -7px); }
+}
+
+/* --- Section Styling --- */
+.section-title {
+    font-family: var(--font-family-serif);
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 400;
+    color: var(--text-color);
+    margin-bottom: 4rem;
+    position: relative;
+}
+#about p {
+    max-width: 700px;
+    font-size: 1.2rem;
+    line-height: 1.8;
+    color: var(--text-color-secondary);
+}
+
+.projects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4rem;
+    width: 100%;
+}
+.project-card {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 4rem;
+}
+.project-card:last-child {
+    border-bottom: none;
+}
+.project-card h3 {
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    font-size: 2.5rem;
+    font-family: var(--font-family-serif);
+    font-weight: 400;
+}
+.project-card p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    color: var(--text-color-secondary);
+    max-width: 600px;
+}
+.project-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* --- NEW: Project Screenshots --- */
+.project-screenshots-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin: 3rem 0 1rem; /* Adjusted margins */
+    width: 100%;
+}
+.screenshot-item {
+    text-align: center;
+}
+.screenshot-item img {
+    width: 100%;
+    max-width: 250px;
+    height: auto;
+    border-radius: 16px; /* Slightly more rounded */
+    border: 1px solid var(--border-color);
+    margin: 0 auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease;
+}
+.screenshot-item img:hover {
+    transform: scale(1.05);
+}
+p.screenshot-caption {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: var(--text-color-secondary);
+    max-width: 100%; /* Override default paragraph constraint */
+    line-height: 1.5;
+}
+
+/* --- Contact Section & Form Redesign --- */
+#contact {
+    min-height: auto;
+    padding-bottom: 10rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center; /* Center content horizontally */
+    text-align: center;
+}
+#contact .section-title {
+    text-align: center;
+    width: 100%;
+}
+#contact p {
+    max-width: 600px; /* Constrain text width */
+    margin-bottom: 3rem;
+    color: var(--text-color-secondary);
+}
+#contact-form {
+    width: 100%;
+    max-width: 600px; /* Centered form max-width */
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.form-group input,
+.form-group textarea {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    padding: 1.2rem 0;
+    color: var(--text-color);
+    font-family: var(--font-family-sans);
+    font-size: 1.2rem;
+    transition: border-color 0.3s ease;
+    width: 100%;
+}
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+.form-group textarea {
+    resize: vertical;
+    min-height: 150px;
+}
+.submit-btn {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    border: none;
+    padding: 1.2rem 2.5rem;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    align-self: center; /* Center the button itself */
+    margin-top: 2rem;
+}
+.submit-btn:hover {
+    background-color: #cccccc;
+    color: #000;
+}
+
+/* --- Footer Orb Canvas --- */
+#footer-canvas-container {
+    height: 400px; /* Adjust height as needed */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 1; /* Ensure it's above the main background but below content if ever overlapping */
+}
+
+#footer-bg {
+    width: 100%;
+    height: 100%;
+}
+
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 4rem 5%;
+    margin-top: 0;
+    border-top: 1px solid var(--border-color);
+}
+footer p {
+    color: var(--text-color-secondary);
+}
+.footer-links {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+}
+.footer-links a {
+    color: var(--text-color-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+}
+.footer-links a:hover {
+    color: var(--text-color);
+}
+
+
+/* --- MOBILE-READY: Styles for Hamburger Menu and Mobile Navigation --- */
+.mobile-menu-toggle {
+    display: none; /* Hidden by default, shown on mobile */
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 1001;
+    padding: 10px;
+}
+
+.hamburger-box {
+    width: 30px;
+    height: 24px;
+    display: inline-block;
+    position: relative;
+}
+
+.hamburger-inner {
+    display: block;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    height: 2px;
+    background-color: var(--text-color);
+    border-radius: 4px;
+    position: absolute;
+    transition: transform 0.22s cubic-bezier(0.55, 0.055, 0.675, 0.19);
+}
+
+.hamburger-inner::before,
+.hamburger-inner::after {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 2px;
+    background-color: var(--text-color);
+    border-radius: 4px;
+    position: absolute;
+    transition: transform 0.15s ease;
+}
+
+.hamburger-inner::before {
+    top: -10px;
+}
+
+.hamburger-inner::after {
+    bottom: -10px;
+}
+
+/* MOBILE-READY: Hamburger animation to "X" */
+.nav-open .hamburger-inner {
+    transform: rotate(225deg);
+    transition-delay: 0.12s;
+    transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+.nav-open .hamburger-inner::before {
+    top: 0;
+    transform: rotate(90deg);
+    transition: top 0.1s ease-out, transform 0.22s cubic-bezier(0.215, 0.61, 0.355, 1) 0.12s;
+}
+.nav-open .hamburger-inner::after {
+    bottom: 0;
+    transform: rotate(-90deg);
+    transition: bottom 0.1s ease-out, transform 0.22s cubic-bezier(0.215, 0.61, 0.355, 1) 0.12s;
+}
+
+
+/* --- MOBILE-READY: Media Queries for Responsiveness --- */
+@media (max-width: 768px) {
+    header {
+        padding: 1.5rem 5%;
+    }
+
+    /* Show mobile menu toggle and hide desktop nav */
+    .mobile-menu-toggle {
+        display: block;
+    }
+    header nav {
+        /* Mobile navigation panel */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
+        
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-100%);
+        transition: transform 0.5s cubic-bezier(0.7, 0, 0.3, 1), opacity 0.5s ease;
+    }
+
+    body.nav-open header nav {
+        opacity: 1;
+        pointer-events: all;
+        transform: translateY(0);
+    }
+    
+    /* Style links for mobile panel */
+    header nav a {
+        margin: 0;
+        padding: 1.5rem 0;
+        font-size: 1.5rem;
+        color: var(--text-color-secondary);
+    }
+    header nav a.active {
+        color: var(--text-color);
+    }
+
+    /* Adjust section padding for smaller screens */
+    section {
+        padding: 6rem 5%;
+    }
+
+    #hero h1 {
+        font-size: clamp(2.5rem, 12vw, 5rem);
+    }
+    #hero p {
+        padding: 0 5%;
+    }
+
+    .section-title {
+        font-size: clamp(2.5rem, 10vw, 4rem);
+    }
+
+    .project-card h3 {
+        font-size: 2rem;
+    }
+        /* --- NEW: Screenshot carousel for mobile --- */
+    .project-screenshots-container {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 1.5rem; /* Space for scrollbar */
+        gap: 1.5rem;
+        /* Hide scrollbar visually for a cleaner look */
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    .project-screenshots-container::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+    }
+    .screenshot-item {
+        flex: 0 0 75%; /* Each item takes up 75% of container width */
+        scroll-snap-align: center;
+    }
+    .screenshot-item img {
+        max-width: 100%; /* Allow image to fill its container */
+        transform: none; /* Disable hover effect on mobile */
+    }
+
+
+
+
+
+}
+
+
+</style>
+</head>
+<body>
+<div id="bg-container">
+    <canvas id="bg"></canvas>
+</div>
+
+<header>
+    <a href="#hero" class="logo">MK</a>
+
+    <button class="mobile-menu-toggle" aria-label="Open navigation menu">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+    
+    <nav>
+        <a href="#hero" class="active">Home</a>
+        <a href="#about">About</a>
+        <a href="#projects">Projects</a>
+        <a href="#contact">Contact</a>
+    </nav>
+</header>
+
+<main>
+    <section id="hero">
+        <div id="hero-content">
+            <h1>Resonant<br><span>Orbs<br></span></h1>
+            <p>My interactive audio-visual portfolio. Click to begin, then scroll to explore.</p>
+            <div id="game-prompt">Click to Begin</div>
+        </div>
+        <div id="scroll-prompt">Scroll Out &darr;</div>
+    </section>
+    
+    <div class="content-wrapper">
+        <section id="about" class="reveal">
+            <h2 class="section-title">About Me</h2>
+            <p>
+                Hi, I’m Max. I’m a web developer who enjoys building interactive and user-friendly interfaces. I got into web development out of curiosity about how websites work, and over time, it became something I really enjoy doing.I like working with 3D graphics on the web using tools like Three.js and I’m always looking for ways to create more engaging experiences.
+            </p>
+        </section>
+
+        <section id="projects" class="reveal">
+            <h2 class="section-title">My Work</h2>
+            <div class="projects-grid">
+                <div class="project-card">
+                    <h3>Music Sharing App SongScout</h3>
+                    <p>Lead front-end developer for a native iOS app focused on social music discovery. Built with SwiftUI, ensuring a seamless and intuitive user experience.</p>
+                        <div class="project-screenshots-container">
+                            <div class="screenshot-item">
+                                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='375' height='812' viewBox='0 0 375 812'%3E%3Crect width='375' height='812' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23EAEAEA' font-family='sans-serif' font-size='18'%3EDiscovery Feed%3C/text%3E%3C/svg%3E" alt="App screenshot showing the discovery feed">
+                                <p class="screenshot-caption">A dynamic and personalized discovery feed to find new tracks and artists.</p>
+                            </div>
+                            <div class="screenshot-item">
+                                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='375' height='812' viewBox='0 0 375 812'%3E%3Crect width='375' height='812' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23EAEAEA' font-family='sans-serif' font-size='18'%3EProfile View%3C/text%3E%3C/svg%3E" alt="App screenshot of a user profile">
+                                <p class="screenshot-caption">Customizable user profiles to share your musical identity with friends.</p>
+                            </div>
+                            <div class="screenshot-item">
+                                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='375' height='812' viewBox='0 0 375 812'%3E%3Crect width='375' height='812' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23EAEAEA' font-family='sans-serif' font-size='18'%3EPlayer UI%3C/text%3E%3C/svg%3E" alt="App screenshot of the music player interface">
+                                <p class="screenshot-caption">A sleek, integrated music player for a seamless listening experience.</p>
+                            </div>
+                        </div>
+                    <a href="#" class="project-link">View on App Store &rarr;</a>
+                </div>
+                <div class="project-card">
+                    <h3>Wii Basketball Decoding</h3>
+                    <p>Trying to decode Wii Basketball Player Stats to build a Live Scoreboard and Statistics Dashboard.</p>
+                    <a href="#" class="project-link">View Case Study &rarr;</a>
+                </div>
+                <div class="project-card">
+                    <h3>This Portfolio</h3>
+                    <p>My own personal site, built to showcase my passion for interactive 3D web experiences using Three.js and modern, clean design principles.</p>
+                    <a href="#" class="project-link">Go to Top&rarr;</a>
+                </div>
+            </div>
+        </section>
+  
+        <section id="contact" class="reveal">
+            <h2 class="section-title">Get In Touch</h2>
+            <p>If you have a project in mind, a question, or just want to say hello, please fill out the form below!</p>
+            <form id="contact-form" action="#" method="POST">
+                <div class="form-group">
+                    <label for="name" class="sr-only">Name</label>
+                    <input type="text" id="name" name="name" placeholder="Your Name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email" class="sr-only">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Your Email" required>
+                </div>
+                <div class="form-group">
+                    <label for="message" class="sr-only">Message</label>
+                    <textarea id="message" name="message" placeholder="Your Message" required></textarea>
+                </div>
+                <button type="submit" class="submit-btn">Send Message</button>
+            </form>
+        </section>
+        
+        <div id="footer-canvas-container">
+            <canvas id="footer-bg"></canvas>
+        </div>
+
+        <footer>
+            <div class="footer-links">
+                <!-- Links to the new legal pages -->
+                <a href="impressum.html" target="_blank">Impressum</a>
+                <a href="datenschutz.html" target="_blank">Datenschutz</a>
+            </div>
+            <p style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-color-secondary);">
+                &copy; 2026 Max Kaube. Crafted with passion.
+            </p>
+            <div style="margin-top: 1rem; font-size: 0.7rem; color: var(--text-color-secondary); line-height: 1.5;">
+                This site uses Three.js (MIT License), the Inter font (SIL Open Font License), and es-module-shims (MIT License). All assets are self-hosted.
+            </div>
+        </footer>
+    </div>
+</main>
+
+<script async src="./js/es-module-shims.js"></script>
+<script type="importmap">
+{
+    "imports": {
+        "three": "./js/three.module.js"
+    }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// --- Game Settings ---
+const ORB_COUNT = 300;
+const PLAYER_ORB_SIZE = 4;
+const LISTENER_ORB_SIZE_INITIAL = 0.4;
+const LISTENER_ORB_SIZE_ACTIVATED = 1.2;
+const ACTIVATED_COLORS = [
+    new THREE.Color(0xFF0000), new THREE.Color(0xFFA500), new THREE.Color(0xFFFF00),
+    new THREE.Color(0xADFF2F), new THREE.Color(0x008000), new THREE.Color(0x00BFFF),
+    new THREE.Color(0x0000FF), new THREE.Color(0x4B0082), new THREE.Color(0xEE82EE),
+    new THREE.Color(0xFF00FF)
+];
+
+// --- Global State ---
+let isGameActive = false;
+let isContentVisible = false;
+let headerHasAppeared = false; // MODIFICATION: Track if header has been shown
+let activatedOrbCount = 0;
+const INITIAL_CAMERA_Z = 40;
+const MAX_CAMERA_Z = 120;
+const CONTENT_REVEAL_SCROLL = window.innerHeight * 0.6; // ScrollY position to start fading in content
+
+// --- Core Setup ---
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('#bg'), antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+camera.position.set(0, 0, INITIAL_CAMERA_Z);
+document.body.style.overflowY = 'hidden';
+
+// --- MODIFICATION: Footer Scene Setup ---
+const footerCanvas = document.querySelector('#footer-bg');
+const footerScene = new THREE.Scene();
+const footerCamera = new THREE.PerspectiveCamera(75, footerCanvas.clientWidth / footerCanvas.clientHeight, 0.1, 1000);
+const footerRenderer = new THREE.WebGLRenderer({ canvas: footerCanvas, antialias: true, alpha: true });
+footerRenderer.setPixelRatio(window.devicePixelRatio);
+footerRenderer.setSize(footerCanvas.clientWidth, footerCanvas.clientHeight);
+footerCamera.position.set(0, 0, 100); // Zoomed out position
+const footerOrbGroup = new THREE.Group();
+footerScene.add(footerOrbGroup);
+
+
+// --- Audio ---
+let audioContext, audioElement, audioSource, analyser;
+const soundEffect = new THREE.Audio(new THREE.AudioListener());
+const MIN_MUSIC_VOLUME = 0.0;
+const MAX_MUSIC_VOLUME = 1.0;
+const chimeUrl = 'chime.mp3';
+const musicUrl = 'north.mp3';
+
+const audioLoader = new THREE.AudioLoader();
+audioLoader.load(chimeUrl, (buffer) => {
+    soundEffect.setBuffer(buffer);
+    soundEffect.setVolume(0.8);
+});
+
+// --- Event Listeners ---
+const gamePrompt = document.getElementById('game-prompt');
+gamePrompt.addEventListener('click', initGame, { once: true });
+
+function initGame() {
+    isGameActive = true;
+    gamePrompt.style.opacity = '0';
+    gamePrompt.style.pointerEvents = 'none';
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioElement = new Audio(musicUrl);
+    audioElement.crossOrigin = "anonymous";
+    audioElement.loop = true;
+    audioElement.volume = MIN_MUSIC_VOLUME;
+    audioSource = audioContext.createMediaElementSource(audioElement);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    audioSource.connect(analyser);
+    analyser.connect(audioContext.destination);
+    audioElement.play().catch(e => console.warn("Background music could not be played. Using silent fallback."));
+    document.querySelector('#scroll-prompt').classList.add('visible');
+}
+
+// --- Content Visibility ---
+function revealContent() {
+    if (isContentVisible) return;
+    isContentVisible = true;
+    headerHasAppeared = true; // MODIFICATION: Mark header as appeared
+    document.querySelector('header').classList.add('visible');
+    document.querySelector('.content-wrapper').classList.add('visible');
+    document.querySelector('#scroll-prompt').style.opacity = '0';
+}
+
+function hideContent() {
+    if (!isContentVisible) return;
+    // MODIFICATION: Do not hide header if it has already appeared once
+    if (headerHasAppeared) {
+        document.querySelector('.content-wrapper').classList.remove('visible');
+        document.querySelector('#scroll-prompt').classList.add('visible');
+        isContentVisible = false;
+        return;
+    }
+    isContentVisible = false;
+    document.querySelector('header').classList.remove('visible');
+    document.querySelector('.content-wrapper').classList.remove('visible');
+    document.querySelector('#scroll-prompt').classList.add('visible');
+}
+
+
+// --- Scene Objects ---
+const listenerNodes = [];
+const footerListenerNodes = []; // MODIFICATION: Array for footer orbs
+const projectiles = [];
+const ACCENT_COLOR_PROJECTILE = new THREE.Color(0xffffff);
+const playerGeom = new THREE.IcosahedronGeometry(PLAYER_ORB_SIZE, 7);
+const playerMat = new THREE.MeshBasicMaterial({ color: 0xcccccc });
+const playerNode = new THREE.Mesh(playerGeom, playerMat);
+scene.add(playerNode);
+
+const listenerGeom = new THREE.IcosahedronGeometry(LISTENER_ORB_SIZE_INITIAL, 7);
+const listenerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+for (let i = 0; i < ORB_COUNT; i++) {
+    const node = new THREE.Mesh(listenerGeom, listenerMat.clone());
+    const phi = Math.acos(-1 + (2 * i) / ORB_COUNT);
+    const theta = Math.sqrt(ORB_COUNT * Math.PI) * phi;
+    node.position.setFromSphericalCoords(50, phi, theta);
+    node.lookAt(scene.position);
+    node.isActivated = false;
+    node.targetScale = new THREE.Vector3(1, 1, 1);
+    scene.add(node);
+    listenerNodes.push(node);    
+    // MODIFICATION: Footer scene node
+    const footerNode = node.clone(); // Clone main node
+    footerOrbGroup.add(footerNode); // Add to the footer group
+    footerListenerNodes.push(footerNode);}
+
+// --- Interaction ---
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener('click', (event) => {
+    // MOBILE-READY: Don't fire projectiles if mobile menu is open
+    if (document.body.classList.contains('nav-open')) return;
+    if (!isGameActive) return;
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    let bestTarget = null;
+    let minAngle = Math.PI;
+    const clickDirection = new THREE.Vector3();
+    raycaster.ray.at(1, clickDirection).normalize();
+
+    listenerNodes.forEach(node => {
+        if (!node.isActivated) {
+            const nodeDirection = node.position.clone().normalize();
+            const angle = clickDirection.angleTo(nodeDirection);
+            if (angle < minAngle && angle < 0.5) {
+                minAngle = angle;
+                bestTarget = node;
+            }
+        }
+    });
+
+    if (bestTarget) {
+        const projectileDirection = bestTarget.position.clone().sub(playerNode.position).normalize();
+        createProjectile(playerNode.position, projectileDirection);
+    }
+});
+
+function createProjectile(origin, direction, isChainReaction = false) {
+    const projectileGeom = new THREE.SphereGeometry(isChainReaction ? 0.15 : 0.3, 8, 8);
+    const projectileMat = new THREE.MeshBasicMaterial({ color: ACCENT_COLOR_PROJECTILE });
+    const projectile = new THREE.Mesh(projectileGeom, projectileMat);
+    
+    projectile.position.copy(origin);
+    projectile.velocity = direction.clone().multiplyScalar(isChainReaction ? 1.0 : 1.7);
+    projectiles.push(projectile);
+    scene.add(projectile);
+}
+
+function activateNode(node) {
+    if (node.isActivated) return;
+    node.isActivated = true;
+    activatedOrbCount++;
+    
+    // On first activation, unlock page scrolling
+    if (activatedOrbCount === 1) {
+        document.body.style.overflowY = 'auto';
+    }
+    
+    if (audioElement) {
+        const volumeRatio = Math.min(activatedOrbCount / (ORB_COUNT * 0.75), 1);
+        audioElement.volume = MIN_MUSIC_VOLUME + (MAX_MUSIC_VOLUME - MIN_MUSIC_VOLUME) * volumeRatio;
+    }
+
+    if (soundEffect.isPlaying) soundEffect.stop();
+    soundEffect.play();
+
+    const newColor = ACTIVATED_COLORS[Math.floor(Math.random() * ACTIVATED_COLORS.length)];
+    node.material.color.set(newColor);
+    node.material.opacity = 1.0;
+    const scale = LISTENER_ORB_SIZE_ACTIVATED / LISTENER_ORB_SIZE_INITIAL;
+    node.targetScale.set(scale, scale, scale);
+
+    const unactivatedNeighbors = listenerNodes.filter(n => !n.isActivated && n !== node);
+    if (unactivatedNeighbors.length > 0) {
+        unactivatedNeighbors.sort((a, b) => a.position.distanceTo(node.position) - b.position.distanceTo(node.position));
+        const target = unactivatedNeighbors[0]; 
+        if (target) {
+            const direction = target.position.clone().sub(node.position).normalize();
+            setTimeout(() => createProjectile(node.position, direction, true), 150); 
+        }
+    }
+}
+
+// --- Scroll & Page Navigation ---
+function handleScroll() {
+    if (!isGameActive) return;
+    const scrollY = window.scrollY;
+
+    // Map scroll position to camera zoom
+    const scrollPercent = Math.min(scrollY / (window.innerHeight * 0.75), 1.0);
+    camera.position.z = THREE.MathUtils.lerp(INITIAL_CAMERA_Z, MAX_CAMERA_Z, scrollPercent);
+
+    // Fade content in/out based on scroll
+    if (scrollY > CONTENT_REVEAL_SCROLL && !isContentVisible) {
+        revealContent();
+    } else if (scrollY <= CONTENT_REVEAL_SCROLL && isContentVisible) {
+        hideContent();
+    }
+}
+window.addEventListener('scroll', handleScroll, { passive: true });
+
+document.querySelectorAll('nav a').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        
+        // MOBILE-READY: Close mobile nav on link click
+        document.body.classList.remove('nav-open');
+
+        const targetId = this.getAttribute('href');
+        const targetElement = document.querySelector(targetId);
+        if (targetElement) {
+            targetElement.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+});
+
+// --- MOBILE-READY: Mobile Navigation Toggle ---
+const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+mobileMenuToggle.addEventListener('click', () => {
+    document.body.classList.toggle('nav-open');
+});
+
+
+// --- Animation Loop ---
+function animate() {
+    requestAnimationFrame(animate);
+
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+        const projectile = projectiles[i];
+        projectile.position.add(projectile.velocity);
+
+        for (const node of listenerNodes) {
+            const distance = projectile.position.distanceTo(node.position);
+            if (!node.isActivated && distance < (LISTENER_ORB_SIZE_ACTIVATED * 1.5)) { 
+                activateNode(node);
+                scene.remove(projectile);
+                projectiles.splice(i, 1);
+                break;
+            }
+        }
+        
+        if (projectile && projectile.position.length() > 150) {
+             scene.remove(projectile);
+             projectiles.splice(i, 1);
+        }
+    }
+    
+    if (analyser) {
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteTimeDomainData(dataArray);
+        let avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        const normalizedFreq = Math.max(0, (avg / 128.0 - 1.0) * 1.5);
+        
+        // Make player orb pulse more strongly
+        const playerScale = 1 + normalizedFreq * 0.25;
+        playerNode.scale.setScalar(playerScale);
+
+        listenerNodes.forEach(node => {
+            node.scale.lerp(node.targetScale, 0.1);
+            if (node.isActivated) {
+                // Make activated orbs pulse more strongly
+                const baseScale = node.targetScale.x;
+                const pulseScale = baseScale + normalizedFreq * baseScale * 0.6;
+                node.scale.set(pulseScale, pulseScale, pulseScale);
+            }
+        });
+    }
+    
+    // MODIFICATION: Rotate footer orb group
+    footerOrbGroup.rotation.y += 0.006;
+    footerOrbGroup.rotation.x += 0.0009;
+
+
+    renderer.render(scene, camera);
+    footerRenderer.render(footerScene, footerCamera); // MODIFICATION: Render footer scene
+}
+
+// --- Resize Listener ---
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // MODIFICATION: Footer canvas
+    const footerCanvasContainer = document.querySelector('#footer-canvas-container');
+    footerCamera.aspect = footerCanvasContainer.clientWidth / footerCanvasContainer.clientHeight;
+    footerCamera.updateProjectionMatrix();
+    footerRenderer.setSize(footerCanvasContainer.clientWidth, footerCanvasContainer.clientHeight);
+});
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+        }
+    });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal').forEach(el => { observer.observe(el); });
+
+animate();
+</script>
+</body>
+</html>
