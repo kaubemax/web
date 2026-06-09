@@ -228,7 +228,7 @@
               </div>
               <div class="field">
                 <label for="machine">Machine</label>
-                <input id="machine" type="text" placeholder="Espresso machine">
+                <input id="machine" type="text" placeholder="Lelit Anna">
               </div>
               <div class="field">
                 <label for="grinder">Grinder</label>
@@ -469,6 +469,7 @@
       ["bean", "roaster", "machine", "grinder"].forEach(id => {
         if (defaults[id]) $(id).value = defaults[id];
       });
+      if (!$("machine").value) $("machine").value = "Lelit Anna";
     }
 
     function updateRangeValues() {

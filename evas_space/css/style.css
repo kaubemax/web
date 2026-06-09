@@ -65,6 +65,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: clip;
   color: var(--ink);
   font-family: var(--font);
   background:
@@ -212,11 +213,17 @@ svg {
 
 .hero {
   position: relative;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
   display: flex;
   align-items: center;
   overflow: hidden;
   min-height: clamp(580px, 84vh, 800px);
-  padding: clamp(48px, 7vw, 104px) 0;
+  padding-block: clamp(48px, 7vw, 104px);
+  /* Align hero copy with the page-shell content column while the banner
+     bleeds full-width (no hard edges on wide desktops). */
+  padding-inline: calc(max(0px, (100vw - 1440px) / 2) + clamp(16px, 3vw, 42px));
 }
 
 /* Fade the roses out toward the text on the left; keep them vivid on the right. */
@@ -323,7 +330,7 @@ svg {
 
 .rose-x-banner {
   position: absolute;
-  inset: 0 max(-42px, -3vw);
+  inset: 0;
   z-index: 0;
   overflow: hidden;
   border-radius: 0;
@@ -351,8 +358,8 @@ svg {
 
 .xmark {
   color: var(--x-color);
-  opacity: .9;
-  animation: xmark-hue 9s linear infinite;
+  opacity: .92;
+  animation: xmark-hue 8s ease-in-out infinite;
   animation-delay: var(--delay, 0s);
 }
 
@@ -387,27 +394,13 @@ svg {
 .leaf-olive { --x-color: #7d8c2c; }
 .leaf-sage { --x-color: #a8ba66; }
 
-.sparkle {
-  opacity: 0;
-  fill: rgba(255, 220, 221, .9);
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: sparkle-pass 6s ease-in-out infinite;
-  animation-delay: var(--delay, 0s);
-}
-
-/* Vivid hue cycle — the roses stay fully present, only their colour shifts.
-   The per-mark --delay makes the hue travel across the artwork as a wave. */
+/* A wave of colour rolls through the roses: each cross shifts hue while it
+   brightens then darkens. The per-mark --delay (spread across the width)
+   makes the lighten/darken wave wander across the artwork. */
 @keyframes xmark-hue {
-  0%   { filter: hue-rotate(0deg) saturate(1.35) brightness(1.02); }
-  50%  { filter: hue-rotate(180deg) saturate(1.7) brightness(1.08); }
-  100% { filter: hue-rotate(360deg) saturate(1.35) brightness(1.02); }
-}
-
-@keyframes sparkle-pass {
-  0%, 22%, 60%, 100% { opacity: 0; transform: scale(.6) rotate(0deg); }
-  34% { opacity: .85; transform: scale(1.05) rotate(20deg); }
-  44% { opacity: 0; transform: scale(.7) rotate(38deg); }
+  0%   { filter: hue-rotate(-12deg) saturate(1.25) brightness(.62); }
+  50%  { filter: hue-rotate(60deg) saturate(1.7) brightness(1.32); }
+  100% { filter: hue-rotate(-12deg) saturate(1.25) brightness(.62); }
 }
 
 .section {
@@ -618,6 +611,23 @@ svg {
   fill: var(--cream);
   stroke: var(--blue);
   stroke-width: 4;
+  transition: r .12s ease, stroke .12s ease;
+}
+
+/* Clickable points → espresso detail */
+.chart svg a {
+  cursor: pointer;
+}
+.chart-hit {
+  fill: transparent;
+}
+.chart svg a:hover .chart-dot,
+.chart svg a:focus-visible .chart-dot {
+  r: 8;
+  stroke: var(--rose);
+}
+.chart svg a:focus-visible {
+  outline: none;
 }
 
 .stat-tile {

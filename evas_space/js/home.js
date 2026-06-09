@@ -8,6 +8,7 @@ let allEntries = [];
 let allRecipes = [];
 let allEspresso = [];
 let allArchive = [];
+let viewPrefs = { recipe: true, espresso: true, archive: true };
 
 function matchesQuery(entry, q) {
   if (!q) return true;
@@ -33,7 +34,7 @@ function cardImage(entry) {
 function renderRecipes(recipes) {
   const grid = document.getElementById("recipe-grid");
   if (!recipes.length) {
-    grid.innerHTML = `<p class="muted empty-note">No matching recipes.</p>`;
+    grid.innerHTML = `<p class="muted empty-note">No recipes yet.</p>`;
     return;
   }
   grid.innerHTML = recipes.map(entry => `
@@ -55,7 +56,7 @@ function renderRecipes(recipes) {
 function renderArchive(archive) {
   const grid = document.getElementById("archive-grid");
   if (!archive.length) {
-    grid.innerHTML = `<p class="muted empty-note">No matching notes.</p>`;
+    grid.innerHTML = `<p class="muted empty-note">No notes yet.</p>`;
     return;
   }
   grid.innerHTML = archive.map(entry => `
@@ -90,7 +91,12 @@ function renderChart(shots) {
     <svg viewBox="0 0 ${width} ${height}" aria-label="Espresso rating trend chart">
       <path class="chart-grid" d="M34 54 H606 M34 109 H606 M34 164 H606 M34 219 H606"/>
       <path class="chart-line" d="${path}"/>
-      ${points.map(point => `<circle class="chart-dot" cx="${point.x}" cy="${point.y}" r="6"><title>${esc(point.shot.title)}: ${esc(point.shot.rating)}/10</title></circle>`).join("")}
+      ${points.map(point => `
+        <a href="./recipe.html?type=espresso&slug=${encodeURIComponent(point.shot.slug)}" aria-label="${esc(point.shot.title)}, rating ${esc(point.shot.rating)} of 10">
+          <circle class="chart-hit" cx="${point.x}" cy="${point.y}" r="16"></circle>
+          <circle class="chart-dot" cx="${point.x}" cy="${point.y}" r="6"><title>${esc(point.shot.title)}: ${esc(point.shot.rating)}/10</title></circle>
+        </a>
+      `).join("")}
     </svg>
   `;
 }
@@ -104,7 +110,7 @@ function renderEspresso(entries, espresso) {
   document.getElementById("rating-chart").innerHTML = renderChart(stats.shots);
   const list = document.getElementById("espresso-list");
   if (!espresso.length) {
-    list.innerHTML = `<p class="muted empty-note">No matching espresso logs.</p>`;
+    list.innerHTML = `<p class="muted empty-note">No espresso logs yet.</p>`;
     return;
   }
   list.innerHTML = espresso.map(entry => `
@@ -124,35 +130,95 @@ function renderEspresso(entries, espresso) {
   `).join("");
 }
 
-function applyFilter(query) {
-  const q = query.trim().toLowerCase();
-  const recipes = allRecipes.filter(entry => matchesQuery(entry, q));
-  const espresso = allEspresso.filter(entry => matchesQuery(entry, q));
-  const archive = allArchive.filter(entry => matchesQuery(entry, q));
+// ---------------------------------------------------------------------------
+// Search: one consolidated results grid instead of filtering the whole page
+// ---------------------------------------------------------------------------
+const typeLabel = entry =>
+  entry.type === "recipe" ? "Cooked food" : entry.type === "espresso" ? "Espresso" : (entry.topic || "Archive");
 
-  renderRecipes(recipes);
-  renderEspresso(allEntries, espresso);
-  renderArchive(archive);
-
-  const summary = document.getElementById("search-summary");
-  if (summary) {
-    const count = recipes.length + espresso.length + archive.length;
-    summary.textContent = q ? `${count} result${count === 1 ? "" : "s"}` : "";
+function resultMeta(entry) {
+  if (entry.type === "recipe") {
+    return entry.rating ? starRating(entry.rating) : `<span>${esc(entry.cook_time || entry.prep_time || "")}</span>`;
   }
+  if (entry.type === "espresso") {
+    return `<span>${esc(entry.rating)}/10</span>`;
+  }
+  return normalizeTags(entry.tags).slice(0, 2).map(tag => `<span>${esc(tag)}</span>`).join("");
+}
+
+function resultCard(entry) {
+  return `
+    <a class="entry-card${entry.type === "archive" ? " archive-card" : ""}" href="./recipe.html?type=${entry.type}&slug=${encodeURIComponent(entry.slug)}">
+      ${cardImage(entry)}
+      <div class="entry-card-body">
+        <div class="card-kicker">${esc(typeLabel(entry))}</div>
+        <h3>${esc(entry.title)}</h3>
+        <p>${esc(entry.intro || entry.notes || entry.body || "")}</p>
+        <div class="entry-meta">
+          <span>${esc(formatDate(entry.date || entry.created_at))}</span>
+          ${resultMeta(entry)}
+        </div>
+      </div>
+    </a>
+  `;
+}
+
+function setSection(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = !show;
+}
+
+function showNormalView() {
+  document.getElementById("search-results").hidden = true;
+  document.querySelector(".intro-grid").hidden = false;
+  setSection("recipes", viewPrefs.recipe);
+  setSection("espresso", viewPrefs.espresso);
+  setSection("archive", viewPrefs.archive);
+}
+
+function showSearchView(query, results) {
+  document.querySelector(".intro-grid").hidden = true;
+  setSection("recipes", false);
+  setSection("espresso", false);
+  setSection("archive", false);
+
+  const section = document.getElementById("search-results");
+  section.hidden = false;
+  document.getElementById("results-title").textContent =
+    `${results.length} result${results.length === 1 ? "" : "s"} for “${query}”`;
+  document.getElementById("results-grid").innerHTML = results.length
+    ? results.map(resultCard).join("")
+    : `<p class="muted empty-note">No entries match “${esc(query)}”. Try a different word or tag.</p>`;
+}
+
+function applyFilter(rawQuery) {
+  const query = rawQuery.trim();
+  const summary = document.getElementById("search-summary");
+  if (!query) {
+    showNormalView();
+    if (summary) summary.textContent = "";
+    return;
+  }
+  const q = query.toLowerCase();
+  const results = allEntries
+    .filter(entry => matchesQuery(entry, q))
+    .sort((a, b) => new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0));
+  showSearchView(query, results);
+  if (summary) summary.textContent = `${results.length} result${results.length === 1 ? "" : "s"}`;
 }
 
 async function render() {
-  const [entries, viewPrefs] = await Promise.all([loadEntries("public"), loadViewPrefs()]);
+  const [entries, prefs] = await Promise.all([loadEntries("public"), loadViewPrefs()]);
   allEntries = entries;
+  viewPrefs = prefs;
   allRecipes = entries.filter(entry => entry.type === "recipe");
   allEspresso = entries.filter(entry => entry.type === "espresso");
   allArchive = entries.filter(entry => entry.type === "archive");
 
-  document.getElementById("recipes").hidden = !viewPrefs.recipe;
-  document.getElementById("espresso").hidden = !viewPrefs.espresso;
-  document.getElementById("archive").hidden = !viewPrefs.archive;
-
-  applyFilter("");
+  renderRecipes(allRecipes);
+  renderEspresso(allEntries, allEspresso);
+  renderArchive(allArchive);
+  showNormalView();
 
   const search = document.getElementById("site-search");
   if (search) {

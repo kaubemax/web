@@ -7,7 +7,7 @@ const W = 1600;
 const H = 500;
 const STEP = 12;
 const X_SIZE = 8;
-const waveDuration = 5;
+const waveDuration = 8;
 
 function setWaveDelay(el, x, y) {
   const normalizedX = x / W;
@@ -161,14 +161,6 @@ function createXMark({ x, y, cls, small }) {
   return group;
 }
 
-function createSparkle(x, y, r) {
-  const star = document.createElementNS(svgNS, "path");
-  star.setAttribute("class", "sparkle");
-  star.setAttribute("d", `M ${x} ${y - r * 5} L ${x + r} ${y - r} L ${x + r * 5} ${y} L ${x + r} ${y + r} L ${x} ${y + r * 5} L ${x - r} ${y + r} L ${x - r * 5} ${y} L ${x - r} ${y - r} Z`);
-  setWaveDelay(star, x, y);
-  return star;
-}
-
 export function renderRoseBanner(root = document) {
   const layer = root.querySelector(".xmark-layer");
   if (!layer) return;
@@ -176,12 +168,4 @@ export function renderRoseBanner(root = document) {
   const fragment = document.createDocumentFragment();
   buildArtwork().forEach(mark => fragment.appendChild(createXMark(mark)));
   layer.replaceChildren(fragment);
-
-  const sparkleLayer = root.querySelector(".sparkle-layer");
-  if (sparkleLayer) {
-    const sparkles = document.createDocumentFragment();
-    [[270, 130, 2.1], [810, 170, 2.8], [1162, 280, 2.4], [1356, 114, 2.7], [1516, 136, 2.2]]
-      .forEach(([x, y, r]) => sparkles.appendChild(createSparkle(x, y, r)));
-    sparkleLayer.replaceChildren(sparkles);
-  }
 }
