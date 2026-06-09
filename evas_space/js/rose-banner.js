@@ -7,7 +7,7 @@ const W = 1600;
 const H = 500;
 const STEP = 12;
 const X_SIZE = 8;
-const waveDuration = 11;
+const waveDuration = 5;
 
 function setWaveDelay(el, x, y) {
   const normalizedX = x / W;

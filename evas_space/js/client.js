@@ -509,6 +509,18 @@ export async function recordHit(path = location.pathname) {
   }
 }
 
+export async function loadVisitsByDay() {
+  if (!sb) return [];
+  try {
+    const { data, error } = await sb.from("v_visits_by_day").select("*");
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.warn("Eva's Space: could not load daily visits.", error);
+    return [];
+  }
+}
+
 export async function loadVisitStats() {
   if (!sb) return { total: 0, today: 0 };
   const today = new Date().toISOString().slice(0, 10);
