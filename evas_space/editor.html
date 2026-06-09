@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Studio — Eva's Space</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style.css">
+<script src="./js/supabase-config.js"></script>
+</head>
+<body>
+  <div class="page-shell studio-shell">
+    <nav class="topbar" aria-label="Primary navigation">
+      <a class="brand" href="./index.html">
+        <span class="brand-mark">E</span>
+        <span>Eva's Space</span>
+      </a>
+      <div class="nav-links">
+        <a href="./index.html#recipes">Cooked Food</a>
+        <a href="./index.html#espresso">Espresso</a>
+        <a href="./index.html#archive">Archive</a>
+        <a class="studio-link" href="./index.html">View site</a>
+      </div>
+    </nav>
+
+    <main class="studio-layout">
+      <aside class="studio-sidebar">
+        <p class="eyebrow">Private studio</p>
+        <h1>Write the archive.</h1>
+        <p>This prototype saves to this browser right now. Once Supabase is connected, the same fields map to database rows and image storage.</p>
+        <div class="mode-switch" role="tablist" aria-label="Entry type">
+          <button id="recipe-mode" class="active" type="button">Cooked food</button>
+          <button id="espresso-mode" type="button">Espresso</button>
+          <button id="archive-mode" type="button">Archive</button>
+        </div>
+        <div class="backend-status">
+          <span id="status-dot"></span>
+          <strong id="backend-title">Local demo mode</strong>
+          <p id="backend-copy">Backend needed: Supabase Auth, RLS, media bucket, recipes, recipe_ingredients, recipe_steps, espresso_logs, archive_entries, and public_settings.</p>
+        </div>
+      </aside>
+
+      <section class="studio-main">
+        <div id="app-msg"></div>
+        <section class="dashboard-panel">
+          <div class="section-head compact">
+            <div>
+              <p class="eyebrow">Dashboard</p>
+              <h2>Archive overview</h2>
+            </div>
+            <button class="btn" id="open-new" type="button">New entry</button>
+          </div>
+          <div id="stat-grid" class="stat-grid"></div>
+          <div class="visibility-panel">
+            <div>
+              <h3>Public archive visibility</h3>
+              <p>Local prototype setting. In Supabase this becomes a `public_settings` row.</p>
+            </div>
+            <div id="visibility-toggles" class="visibility-toggles"></div>
+          </div>
+        </section>
+
+        <form id="entry-form" class="editor-form" hidden>
+          <input id="entry-id" type="hidden">
+          <input id="entry-type" type="hidden" value="recipe">
+          <div class="editor-form-head">
+            <div>
+              <p class="eyebrow">Edit view</p>
+              <h2 id="form-title">New cooked food entry</h2>
+            </div>
+            <button id="close-form" class="btn ghost" type="button">Close</button>
+          </div>
+
+          <div class="form-band">
+            <div class="field">
+              <label for="title">Title</label>
+              <input id="title" type="text" required placeholder="Silk tomato rigatoni">
+            </div>
+            <div class="row two">
+              <div class="field">
+                <label for="date">Date</label>
+                <input id="date" type="date">
+              </div>
+              <div class="field">
+                <label for="mood">Mood</label>
+                <input id="mood" type="text" placeholder="slow dinner, bright shot...">
+              </div>
+            </div>
+            <div class="field">
+              <label for="intro">Short note</label>
+              <textarea id="intro" rows="3" placeholder="What made this worth saving?"></textarea>
+            </div>
+            <div class="field">
+              <label for="photo">Picture</label>
+              <input id="photo" type="file" accept="image/*">
+              <div class="hint">Local prototype stores small image previews in browser storage. Supabase later stores full files in a public bucket.</div>
+              <div id="photo-preview" class="photo-preview" hidden></div>
+            </div>
+          </div>
+
+          <div id="recipe-fields" class="form-band">
+            <div class="row three">
+              <div class="field">
+                <label for="servings">Servings</label>
+                <input id="servings" type="text" placeholder="2">
+              </div>
+              <div class="field">
+                <label for="prep_time">Prep time</label>
+                <input id="prep_time" type="text" placeholder="10 min">
+              </div>
+              <div class="field">
+                <label for="cook_time">Cook time</label>
+                <input id="cook_time" type="text" placeholder="35 min">
+              </div>
+            </div>
+            <div class="structured-block">
+              <div class="structured-head">
+                <div>
+                  <label>Ingredients</label>
+                  <p>Structured rows make shopping lists, filtering, and later data summaries possible.</p>
+                </div>
+                <button id="add-ingredient" class="btn ghost" type="button">Add ingredient</button>
+              </div>
+              <div class="ingredient-table" aria-label="Recipe ingredients">
+                <div class="ingredient-head">
+                  <span>Amount</span>
+                  <span>Unit</span>
+                  <span>Name</span>
+                  <span>Category</span>
+                  <span>Note</span>
+                  <span></span>
+                </div>
+                <div id="ingredient-rows"></div>
+              </div>
+            </div>
+            <div class="structured-block">
+              <div class="structured-head">
+                <div>
+                  <label>Method</label>
+                  <p>Each step is stored as its own ordered item.</p>
+                </div>
+                <button id="add-step" class="btn ghost" type="button">Add step</button>
+              </div>
+              <div id="step-rows" class="step-rows"></div>
+            </div>
+          </div>
+
+          <div id="espresso-fields" class="form-band" hidden>
+            <div class="row two">
+              <div class="field">
+                <label for="bean">Bean</label>
+                <input id="bean" type="text" placeholder="Ethiopia Guji">
+              </div>
+              <div class="field">
+                <label for="roaster">Roaster</label>
+                <input id="roaster" type="text" placeholder="Roaster name">
+              </div>
+            </div>
+            <div class="row four">
+              <div class="field">
+                <label for="dose_g">Dose g</label>
+                <input id="dose_g" type="number" min="0" step="0.1" placeholder="18">
+              </div>
+              <div class="field">
+                <label for="yield_g">Yield g</label>
+                <input id="yield_g" type="number" min="0" step="0.1" placeholder="40">
+              </div>
+              <div class="field">
+                <label for="time_s">Time s</label>
+                <input id="time_s" type="number" min="0" step="1" placeholder="29">
+              </div>
+              <div class="field">
+                <label for="rating">Rating</label>
+                <input id="rating" type="number" min="0" max="10" step="1" placeholder="8">
+              </div>
+            </div>
+            <div class="row four">
+              <div class="field">
+                <label for="grind_setting">Grind</label>
+                <input id="grind_setting" type="text" placeholder="5.2">
+              </div>
+              <div class="field">
+                <label for="water_temp_c">Temp C</label>
+                <input id="water_temp_c" type="number" min="70" max="105" step="1" placeholder="93">
+              </div>
+              <div class="field">
+                <label for="machine">Machine</label>
+                <input id="machine" type="text" placeholder="Espresso machine">
+              </div>
+              <div class="field">
+                <label for="grinder">Grinder</label>
+                <input id="grinder" type="text" placeholder="Home grinder">
+              </div>
+            </div>
+            <div class="taste-sliders">
+              <label>Acidity <span data-range-value="acidity">5</span><input id="acidity" type="range" min="0" max="10" value="5"></label>
+              <label>Sweetness <span data-range-value="sweetness">5</span><input id="sweetness" type="range" min="0" max="10" value="5"></label>
+              <label>Body <span data-range-value="body">5</span><input id="body" type="range" min="0" max="10" value="5"></label>
+              <label>Bitterness <span data-range-value="bitterness">5</span><input id="bitterness" type="range" min="0" max="10" value="5"></label>
+            </div>
+            <div class="field">
+              <label for="notes">Espresso notes</label>
+              <textarea id="notes" placeholder="What changed? What should be tried next?"></textarea>
+            </div>
+          </div>
+
+          <div id="archive-fields" class="form-band" hidden>
+            <div class="row two">
+              <div class="field">
+                <label for="topic">Topic</label>
+                <input id="topic" type="text" placeholder="market, travel, idea...">
+              </div>
+              <div class="field">
+                <label for="tags">Tags</label>
+                <input id="tags" type="text" placeholder="market, seasonal, idea">
+              </div>
+            </div>
+            <div class="field">
+              <label for="archive_body">Archive note</label>
+              <textarea id="archive_body" placeholder="Write the general note, list, observation, or memory here."></textarea>
+            </div>
+          </div>
+
+          <div class="publish-row">
+            <label class="toggle">
+              <input id="published" type="checkbox" checked>
+              <span></span>
+              Published
+            </label>
+            <div class="form-actions">
+              <button class="btn ghost" id="reset-btn" type="button">New</button>
+              <button class="btn" type="submit">Save entry</button>
+            </div>
+          </div>
+        </form>
+
+        <section class="entries-panel">
+          <div class="section-head compact">
+            <div>
+              <p class="eyebrow">Current entries</p>
+              <h2>Local archive</h2>
+            </div>
+            <button class="text-link danger-link" id="clear-local" type="button">Reset demo</button>
+          </div>
+          <div id="entry-list" class="editor-list"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <datalist id="unit-options">
+    <option value="g">
+    <option value="kg">
+    <option value="ml">
+    <option value="l">
+    <option value="tsp">
+    <option value="tbsp">
+    <option value="cup">
+    <option value="piece">
+    <option value="pieces">
+    <option value="clove">
+    <option value="cloves">
+    <option value="can">
+    <option value="jar">
+    <option value="slice">
+    <option value="slices">
+    <option value="pinch">
+  </datalist>
+
+  <datalist id="ingredient-category-options">
+    <option value="vegetable">
+    <option value="fruit">
+    <option value="herb">
+    <option value="spice">
+    <option value="seasoning">
+    <option value="pantry">
+    <option value="pasta">
+    <option value="grain">
+    <option value="bread">
+    <option value="dairy">
+    <option value="protein">
+    <option value="fish">
+    <option value="meat">
+    <option value="sauce">
+    <option value="baking">
+  </datalist>
+
+  <script type="module">
+    import { archiveTypes, deleteEntry, entryStats, esc, formatDate, getEntries, getEspressoDefaults, getViewPrefs, imageToDataUrl, normalizeIngredients, normalizeSteps, normalizeTags, resetDemoEntries, saveEspressoDefaults, saveViewPrefs, slugify, supabaseConfigured, upsertEntry } from "./js/client.js";
+
+    const $ = id => document.getElementById(id);
+    let currentPhoto = "";
+
+    function message(text, type = "ok") {
+      $("app-msg").innerHTML = text ? `<div class="msg ${type}">${esc(text)}</div>` : "";
+    }
+
+    function showForm(show) {
+      $("entry-form").hidden = !show;
+      if (!show) window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function setMode(type) {
+      $("entry-type").value = type;
+      $("recipe-fields").hidden = type !== "recipe";
+      $("espresso-fields").hidden = type !== "espresso";
+      $("archive-fields").hidden = type !== "archive";
+      $("recipe-mode").classList.toggle("active", type === "recipe");
+      $("espresso-mode").classList.toggle("active", type === "espresso");
+      $("archive-mode").classList.toggle("active", type === "archive");
+      $("title").placeholder = type === "recipe" ? "Silk tomato rigatoni" : type === "espresso" ? "Honeyed morning shot" : "Saturday market notes";
+      $("form-title").textContent = type === "recipe" ? "New cooked food entry" : type === "espresso" ? "New espresso log" : "New archive note";
+    }
+
+    function resetForm(type = $("entry-type").value || "recipe") {
+      $("entry-form").reset();
+      $("entry-id").value = "";
+      $("date").valueAsDate = new Date();
+      currentPhoto = "";
+      $("photo-preview").hidden = true;
+      $("photo-preview").style.backgroundImage = "";
+      setMode(type);
+      setRecipeRows([], []);
+      if (type === "espresso") applyEspressoDefaults();
+      updateRangeValues();
+    }
+
+    function numberValue(id) {
+      const value = $(id).value;
+      return value === "" ? null : Number(value);
+    }
+
+    function ingredientRowTemplate(item = {}) {
+      return `
+        <div class="ingredient-row">
+          <input data-ingredient="amount" type="text" inputmode="decimal" placeholder="200" value="${esc(item.amount || "")}">
+          <input data-ingredient="unit" type="text" list="unit-options" placeholder="g" value="${esc(item.unit || "")}">
+          <input data-ingredient="name" type="text" placeholder="tomatoes" value="${esc(item.name || "")}">
+          <input data-ingredient="category" type="text" list="ingredient-category-options" placeholder="vegetable" value="${esc(item.category || "")}">
+          <input data-ingredient="note" type="text" placeholder="chopped, canned..." value="${esc(item.note || "")}">
+          <button class="icon-button" type="button" data-remove-ingredient aria-label="Remove ingredient">x</button>
+        </div>
+      `;
+    }
+
+    function stepRowTemplate(step = "", index = 0) {
+      return `
+        <div class="step-row">
+          <span>${index + 1}</span>
+          <textarea data-step rows="2" placeholder="Describe this step">${esc(step)}</textarea>
+          <button class="icon-button" type="button" data-remove-step aria-label="Remove step">x</button>
+        </div>
+      `;
+    }
+
+    function setRecipeRows(ingredients, steps) {
+      const normalizedIngredients = normalizeIngredients(ingredients);
+      const normalizedSteps = normalizeSteps(steps);
+      $("ingredient-rows").innerHTML = (normalizedIngredients.length ? normalizedIngredients : [{}, {}, {}])
+        .map(item => ingredientRowTemplate(item))
+        .join("");
+      $("step-rows").innerHTML = (normalizedSteps.length ? normalizedSteps : [""])
+        .map((step, index) => stepRowTemplate(step, index))
+        .join("");
+    }
+
+    function collectIngredients() {
+      return [...document.querySelectorAll(".ingredient-row")]
+        .map(row => ({
+          amount: row.querySelector('[data-ingredient="amount"]').value.trim(),
+          unit: row.querySelector('[data-ingredient="unit"]').value.trim(),
+          name: row.querySelector('[data-ingredient="name"]').value.trim(),
+          category: row.querySelector('[data-ingredient="category"]').value.trim(),
+          note: row.querySelector('[data-ingredient="note"]').value.trim()
+        }))
+        .filter(item => item.name || item.amount || item.unit || item.category || item.note);
+    }
+
+    function collectSteps() {
+      return [...document.querySelectorAll("[data-step]")]
+        .map(input => input.value.trim())
+        .filter(Boolean);
+    }
+
+    function renumberSteps() {
+      document.querySelectorAll(".step-row span").forEach((label, index) => {
+        label.textContent = index + 1;
+      });
+    }
+
+    function applyEspressoDefaults() {
+      const defaults = getEspressoDefaults();
+      ["bean", "roaster", "machine", "grinder"].forEach(id => {
+        if (defaults[id]) $(id).value = defaults[id];
+      });
+    }
+
+    function updateRangeValues() {
+      ["acidity", "sweetness", "body", "bitterness"].forEach(id => {
+        const output = document.querySelector(`[data-range-value="${id}"]`);
+        if (output) output.textContent = $(id).value;
+      });
+    }
+
+    function renderDashboard() {
+      const entries = getEntries();
+      const stats = entryStats(entries);
+      $("stat-grid").innerHTML = [
+        ["Published", stats.total],
+        ["Recipes", stats.recipes],
+        ["Espresso logs", stats.espresso],
+        ["Archive notes", stats.archive],
+        ["Ingredients tracked", stats.ingredientCount],
+        ["Avg espresso", stats.avgEspressoRating.toFixed(1)]
+      ].map(([label, value]) => `
+        <div class="dashboard-stat">
+          <span>${esc(label)}</span>
+          <strong>${esc(value)}</strong>
+        </div>
+      `).join("");
+
+      const prefs = getViewPrefs();
+      $("visibility-toggles").innerHTML = archiveTypes.map(item => `
+        <label class="toggle visibility-toggle">
+          <input type="checkbox" data-visibility="${esc(item.type)}" ${prefs[item.type] ? "checked" : ""}>
+          <span></span>
+          ${esc(item.label)}
+        </label>
+      `).join("");
+    }
+
+    function startNew(type = $("entry-type").value || "recipe") {
+      resetForm(type);
+      showForm(true);
+      requestAnimationFrame(() => $("title").focus());
+    }
+
+    function entryFromForm() {
+      const type = $("entry-type").value;
+      const id = $("entry-id").value || `${type}-${crypto.randomUUID()}`;
+      const title = $("title").value.trim();
+      const base = {
+        id,
+        type,
+        title,
+        slug: slugify(title) || `${type}-${Date.now()}`,
+        category: type === "recipe" ? "cooked food" : type === "espresso" ? "espresso itinerary" : "general archive",
+        mood: $("mood").value.trim(),
+        intro: $("intro").value.trim(),
+        date: $("date").value,
+        cover_url: currentPhoto,
+        published: $("published").checked,
+        created_at: new Date().toISOString()
+      };
+
+      if (type === "recipe") {
+        return {
+          ...base,
+          servings: $("servings").value.trim(),
+          prep_time: $("prep_time").value.trim(),
+          cook_time: $("cook_time").value.trim(),
+          ingredients: collectIngredients(),
+          steps: collectSteps()
+        };
+      }
+
+      if (type === "archive") {
+        return {
+          ...base,
+          topic: $("topic").value.trim(),
+          tags: normalizeTags($("tags").value),
+          body: $("archive_body").value.trim()
+        };
+      }
+
+      return {
+        ...base,
+        bean: $("bean").value.trim(),
+        roaster: $("roaster").value.trim(),
+        dose_g: numberValue("dose_g"),
+        yield_g: numberValue("yield_g"),
+        time_s: numberValue("time_s"),
+        rating: numberValue("rating"),
+        grind_setting: $("grind_setting").value.trim(),
+        water_temp_c: numberValue("water_temp_c"),
+        machine: $("machine").value.trim(),
+        grinder: $("grinder").value.trim(),
+        acidity: numberValue("acidity"),
+        sweetness: numberValue("sweetness"),
+        body: numberValue("body"),
+        bitterness: numberValue("bitterness"),
+        notes: $("notes").value.trim()
+      };
+    }
+
+    function loadEntry(entry) {
+      resetForm(entry.type);
+      showForm(true);
+      $("entry-id").value = entry.id;
+      $("form-title").textContent = `Edit ${entry.type === "recipe" ? "cooked food" : entry.type === "espresso" ? "espresso log" : "archive note"}`;
+      $("title").value = entry.title || "";
+      $("date").value = entry.date || "";
+      $("mood").value = entry.mood || "";
+      $("intro").value = entry.intro || "";
+      $("published").checked = Boolean(entry.published);
+      currentPhoto = entry.cover_url || "";
+      if (currentPhoto) {
+        $("photo-preview").style.backgroundImage = `url('${currentPhoto}')`;
+        $("photo-preview").hidden = false;
+      }
+
+      if (entry.type === "recipe") {
+        $("servings").value = entry.servings || "";
+        $("prep_time").value = entry.prep_time || "";
+        $("cook_time").value = entry.cook_time || "";
+        setRecipeRows(entry.ingredients, entry.steps);
+      } else if (entry.type === "archive") {
+        $("topic").value = entry.topic || "";
+        $("tags").value = normalizeTags(entry.tags).join(", ");
+        $("archive_body").value = entry.body || "";
+      } else {
+        ["bean", "roaster", "dose_g", "yield_g", "time_s", "rating", "grind_setting", "water_temp_c", "machine", "grinder", "acidity", "sweetness", "body", "bitterness", "notes"]
+          .forEach(id => { $(id).value = entry[id] ?? $(id).value; });
+        updateRangeValues();
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderList() {
+      const entries = getEntries();
+      $("entry-list").innerHTML = entries.map(entry => `
+        <article class="editor-list-item">
+          <div>
+            <span class="date-chip">${esc(entry.type === "recipe" ? "food" : entry.type)}</span>
+            <h3>${esc(entry.title)}</h3>
+            <p>${esc(formatDate(entry.date || entry.created_at))}${entry.published ? "" : " · draft"}</p>
+          </div>
+          <div class="editor-actions">
+            <button class="btn ghost" type="button" data-edit="${esc(entry.id)}">Edit</button>
+            <button class="btn danger" type="button" data-delete="${esc(entry.id)}">Delete</button>
+          </div>
+        </article>
+      `).join("");
+
+      $("entry-list").querySelectorAll("[data-edit]").forEach(button => {
+        button.addEventListener("click", () => {
+          const entry = getEntries().find(item => item.id === button.dataset.edit);
+          if (entry) loadEntry(entry);
+        });
+      });
+      $("entry-list").querySelectorAll("[data-delete]").forEach(button => {
+        button.addEventListener("click", () => {
+          if (!confirm("Delete this local entry?")) return;
+          deleteEntry(button.dataset.delete);
+          renderDashboard();
+          renderList();
+          message("Entry deleted.");
+        });
+      });
+    }
+
+    $("recipe-mode").addEventListener("click", () => startNew("recipe"));
+    $("espresso-mode").addEventListener("click", () => startNew("espresso"));
+    $("archive-mode").addEventListener("click", () => startNew("archive"));
+    $("open-new").addEventListener("click", () => startNew());
+    $("close-form").addEventListener("click", () => showForm(false));
+    $("reset-btn").addEventListener("click", () => startNew($("entry-type").value));
+    $("visibility-toggles").addEventListener("change", event => {
+      if (!event.target.matches("[data-visibility]")) return;
+      const prefs = getViewPrefs();
+      prefs[event.target.dataset.visibility] = event.target.checked;
+      saveViewPrefs(prefs);
+      message("Visibility setting saved locally. Refresh the public page to see it.");
+    });
+    $("add-ingredient").addEventListener("click", () => {
+      $("ingredient-rows").insertAdjacentHTML("beforeend", ingredientRowTemplate());
+      $("ingredient-rows").querySelector(".ingredient-row:last-child [data-ingredient='amount']").focus();
+    });
+    $("add-step").addEventListener("click", () => {
+      const index = document.querySelectorAll(".step-row").length;
+      $("step-rows").insertAdjacentHTML("beforeend", stepRowTemplate("", index));
+      $("step-rows").querySelector(".step-row:last-child textarea").focus();
+    });
+    $("ingredient-rows").addEventListener("click", event => {
+      if (!event.target.matches("[data-remove-ingredient]")) return;
+      event.target.closest(".ingredient-row").remove();
+      if (!document.querySelector(".ingredient-row")) {
+        $("ingredient-rows").insertAdjacentHTML("beforeend", ingredientRowTemplate());
+      }
+    });
+    $("step-rows").addEventListener("click", event => {
+      if (!event.target.matches("[data-remove-step]")) return;
+      event.target.closest(".step-row").remove();
+      if (!document.querySelector(".step-row")) {
+        $("step-rows").insertAdjacentHTML("beforeend", stepRowTemplate("", 0));
+      }
+      renumberSteps();
+    });
+    $("ingredient-rows").addEventListener("keydown", event => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      $("ingredient-rows").insertAdjacentHTML("beforeend", ingredientRowTemplate());
+      $("ingredient-rows").querySelector(".ingredient-row:last-child [data-ingredient='amount']").focus();
+    });
+    $("clear-local").addEventListener("click", () => {
+      if (!confirm("Reset local demo entries?")) return;
+      resetDemoEntries();
+      resetForm();
+      renderDashboard();
+      renderList();
+      message("Demo data restored.");
+    });
+
+    ["acidity", "sweetness", "body", "bitterness"].forEach(id => {
+      $(id).addEventListener("input", updateRangeValues);
+    });
+
+    $("photo").addEventListener("change", async () => {
+      const file = $("photo").files[0];
+      if (!file) return;
+      currentPhoto = await imageToDataUrl(file);
+      $("photo-preview").style.backgroundImage = `url('${currentPhoto}')`;
+      $("photo-preview").hidden = false;
+    });
+
+    $("entry-form").addEventListener("submit", event => {
+      event.preventDefault();
+      const entry = entryFromForm();
+      if (entry.type === "espresso") saveEspressoDefaults(entry);
+      upsertEntry(entry);
+      renderDashboard();
+      renderList();
+      message("Saved locally. Supabase will replace this persistence layer later.");
+      resetForm(entry.type);
+      showForm(false);
+    });
+
+    if (supabaseConfigured()) {
+      $("backend-title").textContent = "Supabase configured";
+      $("backend-copy").textContent = "Next implementation step: replace localStorage calls with authenticated Supabase reads and writes.";
+      $("status-dot").classList.add("online");
+    }
+
+    const requestedType = new URLSearchParams(location.search).get("type");
+    const initialType = ["recipe", "espresso", "archive"].includes(requestedType) ? requestedType : "recipe";
+    resetForm(initialType);
+    renderDashboard();
+    renderList();
+    if (requestedType) showForm(true);
+  </script>
+</body>
+</html>

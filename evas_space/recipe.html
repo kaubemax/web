@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entry — Eva's Space</title>
+<meta name="description" content="A recipe or espresso note from Eva's Space.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style.css">
+<script src="./js/supabase-config.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <nav class="topbar" aria-label="Primary navigation">
+      <a class="brand" href="./index.html">
+        <span class="brand-mark">E</span>
+        <span>Eva's Space</span>
+      </a>
+      <div class="nav-links">
+        <a href="./index.html#recipes">Cooked Food</a>
+        <a href="./index.html#espresso">Espresso</a>
+        <a href="./index.html#archive">Archive</a>
+        <a class="studio-link" href="./editor.html">Studio</a>
+      </div>
+    </nav>
+
+    <main id="content" class="detail-wrap">
+      <p class="muted">Loading entry...</p>
+    </main>
+  </div>
+
+  <script type="module">
+    import { esc, formatDate, formatIngredient, getEntries, normalizeIngredients, normalizeSteps, normalizeTags, recipeGradient } from "./js/client.js";
+
+    const params = new URLSearchParams(location.search);
+    const slug = params.get("slug");
+    const type = params.get("type");
+    const entries = getEntries();
+    const entry = entries.find(item => item.slug === slug && (!type || item.type === type));
+    const content = document.getElementById("content");
+
+    function heroImage(item) {
+      if (item.cover_url) {
+        return `<div class="detail-image" style="background-image:url('${esc(item.cover_url)}')"></div>`;
+      }
+      return `<div class="detail-image generated" style="background:${recipeGradient(item.title)}"><span>${esc(item.title.slice(0, 1))}</span></div>`;
+    }
+
+    function recipeDetail(item) {
+      const ingredients = normalizeIngredients(item.ingredients);
+      const steps = normalizeSteps(item.steps);
+      const meta = [item.category, item.servings && `Serves ${item.servings}`, item.prep_time && `Prep ${item.prep_time}`, item.cook_time && `Cook ${item.cook_time}`]
+        .filter(Boolean)
+        .map(value => `<span>${esc(value)}</span>`)
+        .join("");
+
+      return `
+        <article class="detail-page">
+          <a class="back-link" href="./index.html#recipes">Back to archive</a>
+          ${heroImage(item)}
+          <div class="detail-header">
+            <p class="eyebrow">${esc(formatDate(item.date || item.created_at))}</p>
+            <h1>${esc(item.title)}</h1>
+            <div class="recipe-meta">${meta}</div>
+            ${item.intro ? `<p class="lead">${esc(item.intro)}</p>` : ""}
+          </div>
+          <div class="recipe-layout">
+            <section class="ingredient-panel">
+              <h2>Ingredients</h2>
+              <ul class="ingredients">
+                ${ingredients.map(ingredient => `
+                  <li>
+                    <strong>${esc(formatIngredient(ingredient))}</strong>
+                    ${ingredient.category ? `<span>${esc(ingredient.category)}</span>` : ""}
+                  </li>
+                `).join("")}
+              </ul>
+            </section>
+            <section class="method-panel">
+              <h2>Method</h2>
+              <ol class="steps">
+                ${steps.map(step => `<li>${esc(step)}</li>`).join("")}
+              </ol>
+            </section>
+          </div>
+        </article>
+      `;
+    }
+
+    function tasteBar(label, value) {
+      const score = Math.max(0, Math.min(10, Number(value || 0)));
+      return `
+        <div class="taste-row">
+          <span>${esc(label)}</span>
+          <div class="taste-track"><i style="width:${score * 10}%"></i></div>
+          <strong>${score}/10</strong>
+        </div>
+      `;
+    }
+
+    function espressoDetail(item) {
+      return `
+        <article class="detail-page espresso-detail">
+          <a class="back-link" href="./index.html#espresso">Back to espresso</a>
+          ${heroImage(item)}
+          <div class="detail-header">
+            <p class="eyebrow">${esc(formatDate(item.date || item.created_at))}</p>
+            <h1>${esc(item.title)}</h1>
+            ${item.intro ? `<p class="lead">${esc(item.intro)}</p>` : ""}
+          </div>
+          <section class="espresso-spec-grid">
+            <div><span>Dose</span><strong>${esc(item.dose_g)}g</strong></div>
+            <div><span>Yield</span><strong>${esc(item.yield_g)}g</strong></div>
+            <div><span>Time</span><strong>${esc(item.time_s)}s</strong></div>
+            <div><span>Rating</span><strong>${esc(item.rating)}/10</strong></div>
+            <div><span>Grind</span><strong>${esc(item.grind_setting || "-")}</strong></div>
+            <div><span>Temperature</span><strong>${esc(item.water_temp_c || "-")} C</strong></div>
+          </section>
+          <div class="espresso-detail-grid">
+            <section>
+              <h2>Shot Notes</h2>
+              <p>${esc(item.notes || "No notes yet.")}</p>
+              <dl class="coffee-defs">
+                <div><dt>Bean</dt><dd>${esc(item.bean || "-")}</dd></div>
+                <div><dt>Roaster</dt><dd>${esc(item.roaster || "-")}</dd></div>
+                <div><dt>Machine</dt><dd>${esc(item.machine || "-")}</dd></div>
+                <div><dt>Grinder</dt><dd>${esc(item.grinder || "-")}</dd></div>
+              </dl>
+            </section>
+            <section>
+              <h2>Taste Profile</h2>
+              ${tasteBar("Acidity", item.acidity)}
+              ${tasteBar("Sweetness", item.sweetness)}
+              ${tasteBar("Body", item.body)}
+              ${tasteBar("Bitterness", item.bitterness)}
+            </section>
+          </div>
+        </article>
+      `;
+    }
+
+    function archiveDetail(item) {
+      const tags = normalizeTags(item.tags);
+      return `
+        <article class="detail-page archive-detail">
+          <a class="back-link" href="./index.html#archive">Back to archive</a>
+          ${heroImage(item)}
+          <div class="detail-header">
+            <p class="eyebrow">${esc(formatDate(item.date || item.created_at))}</p>
+            <h1>${esc(item.title)}</h1>
+            <div class="recipe-meta">
+              ${item.topic ? `<span>${esc(item.topic)}</span>` : ""}
+              ${tags.map(tag => `<span>${esc(tag)}</span>`).join("")}
+            </div>
+            ${item.intro ? `<p class="lead">${esc(item.intro)}</p>` : ""}
+          </div>
+          <section class="archive-body">
+            <h2>Notes</h2>
+            <p>${esc(item.body || "No notes yet.")}</p>
+          </section>
+        </article>
+      `;
+    }
+
+    if (!entry) {
+      content.innerHTML = `<article class="detail-page"><a class="back-link" href="./index.html">Back home</a><h1>Entry not found</h1><p class="lead">This entry is not available in the current local data.</p></article>`;
+    } else {
+      document.title = `${entry.title} — Eva's Space`;
+      content.innerHTML = entry.type === "espresso" ? espressoDetail(entry) : entry.type === "archive" ? archiveDetail(entry) : recipeDetail(entry);
+    }
+  </script>
+</body>
+</html>

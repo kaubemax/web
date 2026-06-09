@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eva's Space</title>
+<meta name="description" content="Eva's personal recipe blog and espresso itinerary.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style.css">
+<script src="./js/supabase-config.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <nav class="topbar" aria-label="Primary navigation">
+      <a class="brand" href="./index.html">
+        <span class="brand-mark">E</span>
+        <span>Eva's Space</span>
+      </a>
+      <div class="nav-links">
+        <a href="#recipes">Cooked Food</a>
+        <a href="#espresso">Espresso</a>
+        <a href="#archive">Archive</a>
+        <a class="studio-link" href="./editor.html">Studio</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <section class="rose-x-banner" aria-label="Animated digital rose banner">
+        <svg class="rose-x-banner__svg" viewBox="0 0 1600 500" preserveAspectRatio="xMidYMid slice" role="img">
+          <title>Animated digital roses made from X-shaped marks</title>
+          <rect class="banner-bg" width="1600" height="500"></rect>
+          <g class="xmark-layer"></g>
+        </svg>
+      </section>
+      <div class="hero-copy">
+        <p class="eyebrow">Personal kitchen archive</p>
+        <h1>Eva's Space</h1>
+        <p class="hero-text">A living notebook for beautiful food, small rituals, and espresso experiments that get better one shot at a time.</p>
+        <div class="hero-actions">
+          <a class="btn" href="#recipes">Browse entries</a>
+          <a class="btn ghost" href="./editor.html">Open studio</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section intro-grid" aria-label="Eva's notebooks">
+        <article class="feature-panel food-panel">
+          <p class="eyebrow">Cooked food</p>
+          <h2>Recipes with memory attached.</h2>
+          <p>Ingredients, method, photos, notes, and the small story that makes a dish worth repeating.</p>
+        </article>
+        <article class="feature-panel coffee-panel">
+          <p class="eyebrow">Espresso itinerary</p>
+          <h2>Every shot becomes data.</h2>
+          <p>Dose, yield, grind, timing, taste scores, pictures, and clear observations for the next improvement.</p>
+        </article>
+        <article class="feature-panel archive-panel">
+          <p class="eyebrow">General archive</p>
+          <h2>Notes that need a place.</h2>
+          <p>Ideas, places, observations, lists, and memories that do not belong to one recipe or espresso shot.</p>
+        </article>
+      </section>
+
+      <section class="section" id="recipes">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Archive one</p>
+            <h2>Cooked Food</h2>
+          </div>
+          <a class="text-link" href="./editor.html?type=recipe">Add recipe</a>
+        </div>
+        <div id="recipe-grid" class="entry-grid"></div>
+      </section>
+
+      <section class="section coffee-lab" id="espresso">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Archive two</p>
+            <h2>Espresso Itinerary</h2>
+          </div>
+          <a class="text-link" href="./editor.html?type=espresso">Log espresso</a>
+        </div>
+        <div class="coffee-dashboard">
+          <article class="chart-panel">
+            <div class="chart-topline">
+              <div>
+                <span class="metric-label">Rating trend</span>
+                <strong id="best-shot">Best shot pending</strong>
+              </div>
+              <div class="metric-pill" id="avg-rating">0.0 avg</div>
+            </div>
+            <div id="rating-chart" class="chart"></div>
+          </article>
+          <article class="stat-tile">
+            <span class="metric-label">Average extraction</span>
+            <strong id="avg-time">0s</strong>
+            <p>Target consistency becomes visible across time.</p>
+          </article>
+          <article class="stat-tile">
+            <span class="metric-label">Average yield</span>
+            <strong id="avg-yield">0g</strong>
+            <p>A quick signal for ratio drift and recipe changes.</p>
+          </article>
+        </div>
+        <div id="espresso-list" class="espresso-timeline"></div>
+      </section>
+
+      <section class="section" id="archive">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Archive three</p>
+            <h2>General Archive</h2>
+          </div>
+          <a class="text-link" href="./editor.html?type=archive">Add note</a>
+        </div>
+        <div id="archive-grid" class="entry-grid compact-grid"></div>
+      </section>
+
+      <section class="section backend-note">
+        <div>
+          <p class="eyebrow">Static now, Supabase later</p>
+          <h2>Built for GitHub Pages.</h2>
+        </div>
+        <p>The current frontend runs entirely as static files. Until Supabase is configured, entries are stored in this browser's local storage for prototyping. The backend needs public read policies, Eva-only write access, a media bucket, structured recipe tables, and espresso logs.</p>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./js/home.js"></script>
+</body>
+</html>
