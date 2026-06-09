@@ -839,12 +839,14 @@
       $("auth-gate").hidden = false;
       $("studio-body").hidden = true;
       $("signout-link").hidden = true;
+      document.querySelector(".mode-switch").hidden = true;
     }
 
     async function showStudio() {
       $("auth-gate").hidden = true;
       $("studio-body").hidden = false;
       $("signout-link").hidden = !supabaseEnabled;
+      document.querySelector(".mode-switch").hidden = false;
       await refresh();
       const requestedType = new URLSearchParams(location.search).get("type");
       const initialType = ["recipe", "espresso", "archive"].includes(requestedType) ? requestedType : "recipe";
