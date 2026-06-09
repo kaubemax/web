@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Studio — Eva's Space</title>
 <meta name="robots" content="noindex">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./css/style.css">
 <script src="./js/supabase-config.js"></script>
 </head>
@@ -12,8 +13,8 @@
   <div class="page-shell studio-shell">
     <nav class="topbar" aria-label="Primary navigation">
       <a class="brand" href="./index.html">
-        <span class="brand-mark">E</span>
-        <span>Eva's Space</span>
+        <span class="brand-mark"><img src="./favicon.svg" alt="" width="34" height="34"></span>
+        <span class="brand-name">Eva's Space</span>
       </a>
       <div class="nav-links">
         <a href="./index.html#recipes">Cooked Food</a>
@@ -28,16 +29,11 @@
       <aside class="studio-sidebar">
         <p class="eyebrow">Private studio</p>
         <h1>Write the archive.</h1>
-        <p>Entries are saved to Supabase as structured rows, and photos upload to the media bucket. Public visitors only ever see published entries.</p>
+        <p>Your space to write recipes, log espresso, and keep notes. Only published entries appear on the public site.</p>
         <div class="mode-switch" role="tablist" aria-label="Entry type">
           <button id="recipe-mode" class="active" type="button">Cooked food</button>
           <button id="espresso-mode" type="button">Espresso</button>
           <button id="archive-mode" type="button">Archive</button>
-        </div>
-        <div class="backend-status">
-          <span id="status-dot"></span>
-          <strong id="backend-title">Local demo mode</strong>
-          <p id="backend-copy">Backend needed: Supabase Auth, RLS, media bucket, recipes, recipe_ingredients, recipe_steps, espresso_logs, archive_entries, and public_settings.</p>
         </div>
       </aside>
 
@@ -48,7 +44,7 @@
           <div class="auth-card">
             <p class="eyebrow">Private studio</p>
             <h2>Sign in to write</h2>
-            <p>Only Eva's account can create or edit entries. Public visitors can read published entries on the main site.</p>
+            <p>Sign in to create or edit entries. Visitors can read published entries on the main site.</p>
             <form id="login-form" class="auth-form">
               <div class="field">
                 <label for="login-email">Email</label>
@@ -84,7 +80,7 @@
           <div class="visibility-panel">
             <div>
               <h3>Public archive visibility</h3>
-              <p>Local prototype setting. In Supabase this becomes a `public_settings` row.</p>
+              <p>Choose which sections appear on your public homepage.</p>
             </div>
             <div id="visibility-toggles" class="visibility-toggles"></div>
           </div>
@@ -123,7 +119,7 @@
             <div class="field">
               <label for="photo">Picture</label>
               <input id="photo" type="file" accept="image/*">
-              <div class="hint">Pictures upload to the Supabase media bucket and are served from a public URL.</div>
+              <div class="hint">Add a photo (JPG or PNG).</div>
               <div id="photo-preview" class="photo-preview" hidden></div>
             </div>
           </div>
@@ -792,19 +788,12 @@
       $("auth-gate").hidden = false;
       $("studio-body").hidden = true;
       $("signout-link").hidden = true;
-      $("backend-title").textContent = "Supabase configured";
-      $("backend-copy").textContent = "Sign in with Eva's account to load and edit the live archive.";
     }
 
     async function showStudio() {
       $("auth-gate").hidden = true;
       $("studio-body").hidden = false;
       $("signout-link").hidden = !supabaseEnabled;
-      if (supabaseEnabled) {
-        $("backend-title").textContent = "Supabase connected";
-        $("backend-copy").textContent = "Live database. Entries, photos, and visibility save to Supabase with row-level security.";
-        $("status-dot").classList.add("online");
-      }
       await refresh();
       const requestedType = new URLSearchParams(location.search).get("type");
       const initialType = ["recipe", "espresso", "archive"].includes(requestedType) ? requestedType : "recipe";

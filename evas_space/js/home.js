@@ -4,7 +4,24 @@ import { renderRoseBanner } from "./rose-banner.js";
 renderRoseBanner();
 recordHit();
 
+let allEntries = [];
+let allRecipes = [];
+let allEspresso = [];
 let allArchive = [];
+
+function matchesQuery(entry, q) {
+  if (!q) return true;
+  const parts = [
+    entry.title, entry.intro, entry.mood, entry.category, entry.topic, entry.body,
+    entry.bean, entry.roaster, entry.machine, entry.grinder, entry.grind_setting, entry.notes,
+    normalizeTags(entry.tags).join(" ")
+  ];
+  if (Array.isArray(entry.ingredients)) {
+    parts.push(entry.ingredients.map(i => `${i.name} ${i.note} ${i.category}`).join(" "));
+  }
+  if (Array.isArray(entry.steps)) parts.push(entry.steps.join(" "));
+  return parts.filter(Boolean).join(" ").toLowerCase().includes(q);
+}
 
 function cardImage(entry) {
   if (entry.cover_url) {
@@ -14,7 +31,12 @@ function cardImage(entry) {
 }
 
 function renderRecipes(recipes) {
-  document.getElementById("recipe-grid").innerHTML = recipes.map(entry => `
+  const grid = document.getElementById("recipe-grid");
+  if (!recipes.length) {
+    grid.innerHTML = `<p class="muted empty-note">No matching recipes.</p>`;
+    return;
+  }
+  grid.innerHTML = recipes.map(entry => `
     <a class="entry-card" href="./recipe.html?type=recipe&slug=${encodeURIComponent(entry.slug)}">
       ${cardImage(entry)}
       <div class="entry-card-body">
@@ -80,7 +102,12 @@ function renderEspresso(entries, espresso) {
   document.getElementById("avg-yield").textContent = `${stats.avgYield.toFixed(1)}g`;
   document.getElementById("best-shot").textContent = stats.best ? stats.best.title : "Best shot pending";
   document.getElementById("rating-chart").innerHTML = renderChart(stats.shots);
-  document.getElementById("espresso-list").innerHTML = espresso.map(entry => `
+  const list = document.getElementById("espresso-list");
+  if (!espresso.length) {
+    list.innerHTML = `<p class="muted empty-note">No matching espresso logs.</p>`;
+    return;
+  }
+  list.innerHTML = espresso.map(entry => `
     <a class="espresso-row" href="./recipe.html?type=espresso&slug=${encodeURIComponent(entry.slug)}">
       <div>
         <span class="date-chip">${esc(formatDate(entry.date || entry.created_at))}</span>
@@ -97,33 +124,39 @@ function renderEspresso(entries, espresso) {
   `).join("");
 }
 
-function filterArchive(query) {
+function applyFilter(query) {
   const q = query.trim().toLowerCase();
-  if (!q) return allArchive;
-  return allArchive.filter(entry => {
-    const haystack = [entry.title, entry.topic, entry.intro, entry.body, normalizeTags(entry.tags).join(" ")]
-      .filter(Boolean).join(" ").toLowerCase();
-    return haystack.includes(q);
-  });
+  const recipes = allRecipes.filter(entry => matchesQuery(entry, q));
+  const espresso = allEspresso.filter(entry => matchesQuery(entry, q));
+  const archive = allArchive.filter(entry => matchesQuery(entry, q));
+
+  renderRecipes(recipes);
+  renderEspresso(allEntries, espresso);
+  renderArchive(archive);
+
+  const summary = document.getElementById("search-summary");
+  if (summary) {
+    const count = recipes.length + espresso.length + archive.length;
+    summary.textContent = q ? `${count} result${count === 1 ? "" : "s"}` : "";
+  }
 }
 
 async function render() {
   const [entries, viewPrefs] = await Promise.all([loadEntries("public"), loadViewPrefs()]);
-  const recipes = entries.filter(entry => entry.type === "recipe");
-  const espresso = entries.filter(entry => entry.type === "espresso");
+  allEntries = entries;
+  allRecipes = entries.filter(entry => entry.type === "recipe");
+  allEspresso = entries.filter(entry => entry.type === "espresso");
   allArchive = entries.filter(entry => entry.type === "archive");
 
   document.getElementById("recipes").hidden = !viewPrefs.recipe;
   document.getElementById("espresso").hidden = !viewPrefs.espresso;
   document.getElementById("archive").hidden = !viewPrefs.archive;
 
-  renderRecipes(recipes);
-  renderEspresso(entries, espresso);
-  renderArchive(allArchive);
+  applyFilter("");
 
-  const search = document.getElementById("archive-search");
+  const search = document.getElementById("site-search");
   if (search) {
-    search.addEventListener("input", () => renderArchive(filterArchive(search.value)));
+    search.addEventListener("input", () => applyFilter(search.value));
   }
 }
 

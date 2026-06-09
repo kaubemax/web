@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Eva's Space">
+  <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="#f7f2e9" stroke="#e3d4bf"/>
+  <g fill="none" stroke-linecap="round">
+    <!-- rose, stitched as an X -->
+    <g stroke="#d51d2c" stroke-width="3.4">
+      <path d="M9.5 8.5 L21 20"/>
+      <path d="M21 8.5 L9.5 20"/>
+    </g>
+    <!-- highlight stitch -->
+    <g stroke="#ff9d96" stroke-width="1.5">
+      <path d="M13 11.4 L17.5 15.9"/>
+      <path d="M17.5 11.4 L13 15.9"/>
+    </g>
+    <!-- leaf -->
+    <g stroke="#3e6f2a" stroke-width="2.5">
+      <path d="M19.5 20.5 L25 26"/>
+      <path d="M25 20.5 L19.5 26"/>
+    </g>
+  </g>
+</svg>

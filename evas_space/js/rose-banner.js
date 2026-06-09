@@ -1,163 +1,172 @@
-const svgNS = "http://www.w3.org/2000/svg";
-const viewBoxWidth = 1600;
-const waveDuration = 11;
-const gridSize = 10;
-const markSize = 9;
+// Digital cross-rose banner: roses, buds, leaves and a vine drawn as a grid of
+// crisp X marks, then animated with a position-based glimmer wave plus a few
+// sparkle "winks". Generated as SVG so it stays sharp at any size.
 
-function waveNoise(seed, amount = 0.5) {
-  const value = Math.sin(seed * 12.9898) * 43758.5453;
-  return (value - Math.floor(value) - 0.5) * amount;
+const svgNS = "http://www.w3.org/2000/svg";
+const W = 1600;
+const H = 500;
+const STEP = 12;
+const X_SIZE = 8;
+const waveDuration = 11;
+
+function setWaveDelay(el, x, y) {
+  const normalizedX = x / W;
+  const verticalVariation = Math.sin(y * 0.036) * 0.52;
+  const organicOffset = Math.sin((x + y) * 0.019) * 0.24;
+  const delay = normalizedX * waveDuration + verticalVariation + organicOffset;
+  el.style.setProperty("--delay", `${delay.toFixed(2)}s`);
 }
 
 function snap(value) {
-  return Math.round(value / gridSize) * gridSize;
+  return Math.round(value / STEP) * STEP;
 }
 
-function addStitch(stitches, x, y, colorClass, role) {
-  stitches.push({
-    x: snap(x),
-    y: snap(y),
-    c: `${colorClass} ${role}`
-  });
+function addMark(marks, x, y, cls, small = false) {
+  marks.push({ x: snap(x), y: snap(y), cls, small });
 }
 
-function cubicPoint(p0, p1, p2, p3, t) {
-  const u = 1 - t;
-  return {
-    x: u ** 3 * p0.x + 3 * u ** 2 * t * p1.x + 3 * u * t ** 2 * p2.x + t ** 3 * p3.x,
-    y: u ** 3 * p0.y + 3 * u ** 2 * t * p1.y + 3 * u * t ** 2 * p2.y + t ** 3 * p3.y
-  };
-}
-
-function addStem(stitches, points, density = 25) {
-  for (let i = 0; i <= density; i += 1) {
-    const t = i / density;
-    const point = cubicPoint(points[0], points[1], points[2], points[3], t);
-    const color = i % 5 === 0 ? "leaf-sage" : i % 3 === 0 ? "leaf-olive" : "leaf-green";
-    addStitch(stitches, point.x, point.y, color, "stem");
-  }
-}
-
-function addLeaf(stitches, cx, cy, rx, ry, angleDeg, flip = 1) {
-  const angle = angleDeg * Math.PI / 180;
+function addRose(marks, cx, cy, rx, ry, palette, angle = 0) {
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);
-  const step = gridSize;
 
-  for (let y = -ry; y <= ry; y += step) {
-    for (let x = -rx; x <= rx; x += step) {
-      const ellipse = (x / rx) ** 2 + (y / ry) ** 2;
-      if (ellipse > 1) continue;
-      const taper = Math.abs(x / rx);
-      if (Math.abs(y / ry) > 1 - taper * 0.32) continue;
-      const px = cx + x * cos - y * sin;
-      const py = cy + x * sin + y * cos;
-      const edge = ellipse > 0.72;
-      const mid = flip * y < 0;
-      const color = edge ? "leaf-dark" : mid ? "leaf-sage" : "leaf-green";
-      addStitch(stitches, px, py, color, "leaf");
-    }
-  }
-}
-
-function addRose(stitches, cx, cy, rx, ry, palette) {
-  const step = gridSize;
-  for (let y = -ry; y <= ry; y += step) {
-    for (let x = -rx; x <= rx; x += step) {
+  for (let x = -rx; x <= rx; x += STEP) {
+    for (let y = -ry; y <= ry; y += STEP) {
       const nx = x / rx;
       const ny = y / ry;
-      const radius = Math.sqrt(nx * nx + ny * ny);
-      if (radius > 1) continue;
+      const d = nx * nx + ny * ny;
+      if (d > 1) continue;
 
-      const angle = Math.atan2(ny, nx);
-      const spiral = Math.sin(angle * 3.2 + radius * 9.5);
-      const petalCut = Math.sin(angle * 5.5 + radius * 4.2);
-      if (radius > 0.86 && petalCut < -0.55) continue;
+      const theta = Math.atan2(ny, nx);
+      const petalWave = Math.sin(theta * 4.2 + Math.sqrt(d) * 9.4);
+      const spiral = Math.abs(Math.sin(theta * 2.4 + Math.sqrt(d) * 13));
+      if (d > 0.76 && petalWave < -0.42) continue;
+      if (d < 0.18 && spiral < 0.28) continue;
 
-      let color = palette.mid;
-      if (radius < 0.2 || spiral > 0.62) color = palette.dark;
-      else if (spiral > 0.22 || nx < -0.28 && ny > -0.1) color = palette.shadow;
-      else if (radius > 0.68 && (ny < -0.12 || nx > 0.2)) color = palette.light;
-      else if (radius > 0.46 && spiral < -0.28) color = palette.highlight;
-      addStitch(stitches, cx + x, cy + y, color, "flower");
+      const xr = x * cos - y * sin;
+      const yr = x * sin + y * cos;
+      let cls;
+
+      if (d < 0.13 || spiral < 0.18) cls = palette[0];
+      else if (petalWave > 0.58 || (nx > 0.18 && ny > -0.25 && d < 0.7)) cls = palette[1];
+      else if (d > 0.72 || petalWave < -0.05) cls = palette[3];
+      else cls = palette[2];
+
+      if (ny < -0.45 && nx < -0.18) cls = palette[4];
+      if (nx > 0.36 && ny < -0.18 && d < 0.82) cls = palette[4];
+      if (nx < -0.52 && ny > 0.1) cls = palette[1];
+
+      addMark(marks, cx + xr, cy + yr, `${cls} flower`);
     }
   }
 }
 
-function addBud(stitches, cx, cy, scale, palette) {
-  addRose(stitches, cx, cy, 28 * scale, 38 * scale, palette);
-  addLeaf(stitches, cx - 18 * scale, cy + 34 * scale, 22 * scale, 9 * scale, -32, -1);
-  addLeaf(stitches, cx + 20 * scale, cy + 30 * scale, 20 * scale, 9 * scale, 35, 1);
+function addLeaf(marks, cx, cy, length, width, angle = 0) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  for (let x = -length / 2; x <= length / 2; x += STEP) {
+    for (let y = -width / 2; y <= width / 2; y += STEP) {
+      const nx = x / (length / 2);
+      const maxY = (1 - Math.abs(nx)) * width / 2;
+      if (Math.abs(y) > maxY) continue;
+      if (Math.random() < 0.08) continue;
+      const xr = x * cos - y * sin;
+      const yr = x * sin + y * cos;
+      const edge = Math.abs(y) / Math.max(maxY, 1);
+      const cls = edge > 0.55 ? "leaf-dark leaf" : x > 0 ? "leaf-sage leaf" : "leaf-olive leaf";
+      addMark(marks, cx + xr, cy + yr, cls, true);
+    }
+  }
 }
 
-function createArtwork() {
-  const stitches = [];
-  const pale = { dark: "rose-coral", shadow: "rose-pink", mid: "rose-blush", highlight: "rose-light", light: "rose-light" };
-  const ruby = { dark: "rose-burgundy", shadow: "rose-dark", mid: "rose-red", highlight: "rose-coral", light: "rose-pink" };
-  const deep = { dark: "rose-burgundy", shadow: "rose-dark", mid: "rose-red", highlight: "rose-coral", light: "rose-blush" };
+function addStem(marks, points) {
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const [x1, y1] = points[i];
+    const [x2, y2] = points[i + 1];
+    const dist = Math.hypot(x2 - x1, y2 - y1);
+    const steps = Math.max(2, Math.floor(dist / STEP));
+    for (let s = 0; s <= steps; s += 1) {
+      const t = s / steps;
+      const x = x1 + (x2 - x1) * t;
+      const y = y1 + (y2 - y1) * t + Math.sin((i + t) * Math.PI) * 3;
+      addMark(marks, x, y, (s + i) % 3 === 0 ? "leaf-dark stem" : "leaf-green stem", true);
+    }
+  }
+}
 
-  addStem(stitches, [{ x: 40, y: 355 }, { x: 360, y: 270 }, { x: 650, y: 380 }, { x: 980, y: 305 }], 58);
-  addStem(stitches, [{ x: 580, y: 324 }, { x: 850, y: 240 }, { x: 1160, y: 360 }, { x: 1560, y: 265 }], 64);
-  addStem(stitches, [{ x: 120, y: 390 }, { x: 450, y: 420 }, { x: 1040, y: 250 }, { x: 1510, y: 365 }], 72);
+function addBud(marks, cx, cy, angle = 0) {
+  addLeaf(marks, cx - 14, cy + 24, 52, 24, angle + 0.8);
+  addLeaf(marks, cx + 16, cy + 26, 54, 24, angle - 0.8);
+  addRose(marks, cx, cy, 32, 54, ["rose-dark", "rose-red", "rose-coral", "rose-pink", "rose-light"], angle);
+}
 
+function buildArtwork() {
+  const marks = [];
+
+  // Main flowing vine and branching stems.
+  addStem(marks, [[50, 335], [190, 285], [315, 350], [462, 295], [620, 345], [785, 320], [960, 355], [1110, 300], [1270, 345], [1450, 280], [1555, 345]]);
+  addStem(marks, [[175, 285], [250, 175], [350, 260], [430, 190]]);
+  addStem(marks, [[640, 345], [735, 240], [825, 320], [875, 245]]);
+  addStem(marks, [[1110, 300], [1195, 235], [1305, 275], [1380, 175]]);
+  addStem(marks, [[1450, 280], [1535, 190]]);
+
+  // Roses and buds.
+  addBud(marks, 63, 153, -0.45);
+  addRose(marks, 282, 178, 126, 88, ["rose-dark", "rose-red", "rose-pink", "rose-blush", "rose-light"], -0.12);
+  addRose(marks, 174, 346, 116, 82, ["rose-burgundy", "rose-dark", "rose-red", "rose-coral", "rose-blush"], 0.16);
+  addRose(marks, 589, 370, 78, 62, ["rose-red", "rose-coral", "rose-pink", "rose-blush", "rose-light"], -0.05);
+  addBud(marks, 585, 175, 0.05);
+  addRose(marks, 800, 252, 152, 105, ["rose-burgundy", "rose-dark", "rose-red", "rose-coral", "rose-blush"], 0.03);
+  addBud(marks, 960, 317, 0.22);
+  addRose(marks, 1145, 344, 96, 76, ["rose-dark", "rose-red", "rose-coral", "rose-pink", "rose-light"], -0.08);
+  addRose(marks, 1340, 185, 132, 92, ["rose-burgundy", "rose-dark", "rose-red", "rose-coral", "rose-blush"], 0.1);
+  addBud(marks, 1532, 168, 0.55);
+
+  // Leaves as a flowing modern vine.
   [
-    [310, 330, 58, 20, -25], [430, 255, 78, 24, 22], [610, 346, 68, 22, -38],
-    [720, 285, 92, 28, 18], [880, 365, 78, 24, -25], [1040, 282, 88, 26, 34],
-    [1190, 360, 74, 24, -22], [1350, 250, 86, 26, 24]
-  ].forEach(([x, y, rx, ry, angle], index) => addLeaf(stitches, x, y, rx, ry, angle, index % 2 ? -1 : 1));
+    [112, 280, 95, 42, -0.55], [360, 247, 92, 48, -1.02], [405, 318, 86, 42, 0.55], [468, 260, 82, 40, -0.18],
+    [342, 409, 95, 42, -0.62], [456, 391, 60, 34, 1.0], [520, 284, 80, 40, 0.15],
+    [905, 382, 92, 40, -0.15], [1014, 405, 66, 34, -0.68], [1015, 305, 78, 36, -0.92],
+    [1080, 226, 86, 43, 0.43], [1183, 206, 80, 38, -1.16], [1205, 270, 82, 38, 0.3],
+    [1258, 381, 66, 34, 1.02], [1328, 344, 70, 34, -1.14], [1395, 288, 90, 40, 0.42], [1480, 359, 92, 42, 0.42]
+  ].forEach(args => addLeaf(marks, ...args));
 
-  addBud(stitches, 92, 315, 0.82, ruby);
-  addRose(stitches, 320, 190, 124, 94, pale);
-  addRose(stitches, 380, 340, 104, 78, ruby);
-  addRose(stitches, 615, 360, 78, 58, pale);
-  addBud(stitches, 705, 270, 0.65, ruby);
-  addRose(stitches, 810, 250, 154, 112, deep);
-  addBud(stitches, 935, 325, 0.72, pale);
-  addRose(stitches, 1115, 365, 92, 68, pale);
-  addRose(stitches, 1300, 190, 126, 92, ruby);
-  addBud(stitches, 1510, 295, 0.78, ruby);
-
-  const seen = new Set();
-  return stitches.filter(stitch => {
-    const key = `${stitch.x}:${stitch.y}:${stitch.c}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  // Dedupe grid positions for a crisp digital result.
+  const unique = new Map();
+  marks.forEach(mark => {
+    const key = `${mark.x},${mark.y}`;
+    if (!unique.has(key)) unique.set(key, mark);
   });
+  return [...unique.values()];
 }
 
-function createXMark({ x, y, c }) {
+function createXMark({ x, y, cls, small }) {
   const group = document.createElementNS(svgNS, "g");
-  group.setAttribute("class", `xmark ${c}`);
+  group.setAttribute("class", `xmark ${cls}${small ? " small" : ""}`);
   group.setAttribute("transform", `translate(${x} ${y})`);
 
   const lineA = document.createElementNS(svgNS, "line");
   lineA.setAttribute("x1", "0");
   lineA.setAttribute("y1", "0");
-  lineA.setAttribute("x2", String(markSize));
-  lineA.setAttribute("y2", String(markSize));
+  lineA.setAttribute("x2", String(X_SIZE));
+  lineA.setAttribute("y2", String(X_SIZE));
 
   const lineB = document.createElementNS(svgNS, "line");
-  lineB.setAttribute("x1", String(markSize));
+  lineB.setAttribute("x1", String(X_SIZE));
   lineB.setAttribute("y1", "0");
   lineB.setAttribute("x2", "0");
-  lineB.setAttribute("y2", String(markSize));
+  lineB.setAttribute("y2", String(X_SIZE));
 
   group.append(lineA, lineB);
+  setWaveDelay(group, x, y);
   return group;
 }
 
-function setWaveDelay(mark) {
-  const transform = mark.getAttribute("transform") || "";
-  const match = transform.match(/translate\(([-\d.]+)[ ,]+([-\d.]+)\)/);
-  if (!match) return;
-  const x = Number(match[1]);
-  const y = Number(match[2]);
-  const normalizedX = x / viewBoxWidth;
-  const verticalVariation = Math.sin(y * 0.035) * 0.55;
-  const randomVariation = waveNoise(x * 0.23 + y * 0.71, 0.5);
-  const delay = normalizedX * waveDuration + verticalVariation + randomVariation;
-  mark.style.setProperty("--delay", `${(-delay).toFixed(2)}s`);
+function createSparkle(x, y, r) {
+  const star = document.createElementNS(svgNS, "path");
+  star.setAttribute("class", "sparkle");
+  star.setAttribute("d", `M ${x} ${y - r * 5} L ${x + r} ${y - r} L ${x + r * 5} ${y} L ${x + r} ${y + r} L ${x} ${y + r * 5} L ${x - r} ${y + r} L ${x - r * 5} ${y} L ${x - r} ${y - r} Z`);
+  setWaveDelay(star, x, y);
+  return star;
 }
 
 export function renderRoseBanner(root = document) {
@@ -165,10 +174,14 @@ export function renderRoseBanner(root = document) {
   if (!layer) return;
 
   const fragment = document.createDocumentFragment();
-  createArtwork().forEach(stitch => {
-    const mark = createXMark(stitch);
-    setWaveDelay(mark);
-    fragment.appendChild(mark);
-  });
+  buildArtwork().forEach(mark => fragment.appendChild(createXMark(mark)));
   layer.replaceChildren(fragment);
+
+  const sparkleLayer = root.querySelector(".sparkle-layer");
+  if (sparkleLayer) {
+    const sparkles = document.createDocumentFragment();
+    [[270, 130, 2.1], [810, 170, 2.8], [1162, 280, 2.4], [1356, 114, 2.7], [1516, 136, 2.2]]
+      .forEach(([x, y, r]) => sparkles.appendChild(createSparkle(x, y, r)));
+    sparkleLayer.replaceChildren(sparkles);
+  }
 }
