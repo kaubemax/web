@@ -860,13 +860,29 @@
     if (!supabaseEnabled) {
       await showStudio();
     } else {
-      showGate();
-      onAuthChange(async user => {
-        if (user) {
-          await showStudio();
-        } else {
-          showGate();
-        }
+      // Initial state. getSession() here is local and runs OUTSIDE the
+      // onAuthStateChange callback, so it's safe to query Supabase after it.
+      const initialUser = await getUser();
+      if (initialUser) {
+        await showStudio();
+      } else {
+        showGate();
+      }
+
+      // React to later sign in / sign out. IMPORTANT: never call Supabase
+      // queries directly inside the onAuthStateChange callback — it holds the
+      // auth lock and deadlocks (this left the studio empty after navigating
+      // away and back, on the restored-session INITIAL_SESSION event). Defer
+      // the work out of the callback, and ignore duplicate/no-op fires.
+      let lastUid = initialUser?.id ?? null;
+      onAuthChange(user => {
+        const uid = user?.id ?? null;
+        if (uid === lastUid) return;
+        lastUid = uid;
+        setTimeout(() => {
+          if (uid) showStudio();
+          else showGate();
+        }, 0);
       });
     }
 
