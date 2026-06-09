@@ -1,13 +1,7 @@
-import { esc, espressoStats, formatDate, getEntries, getViewPrefs, normalizeTags, recipeGradient } from "./client.js";
+import { esc, espressoStats, formatDate, loadEntries, loadViewPrefs, normalizeTags, recipeGradient } from "./client.js";
 import { renderRoseBanner } from "./rose-banner.js";
 
 renderRoseBanner();
-
-const entries = getEntries().filter(entry => entry.published);
-const viewPrefs = getViewPrefs();
-const recipes = entries.filter(entry => entry.type === "recipe");
-const espresso = entries.filter(entry => entry.type === "espresso");
-const archive = entries.filter(entry => entry.type === "archive");
 
 function cardImage(entry) {
   if (entry.cover_url) {
@@ -16,8 +10,8 @@ function cardImage(entry) {
   return `<div class="entry-image generated" style="background:${recipeGradient(entry.title)}"><span>${esc(entry.title.slice(0, 1))}</span></div>`;
 }
 
-function renderRecipes() {
-  document.getElementById("recipes").hidden = !viewPrefs.recipe;
+function renderRecipes(recipes, visible) {
+  document.getElementById("recipes").hidden = !visible;
   document.getElementById("recipe-grid").innerHTML = recipes.map(entry => `
     <a class="entry-card" href="./recipe.html?type=recipe&slug=${encodeURIComponent(entry.slug)}">
       ${cardImage(entry)}
@@ -34,8 +28,8 @@ function renderRecipes() {
   `).join("");
 }
 
-function renderArchive() {
-  document.getElementById("archive").hidden = !viewPrefs.archive;
+function renderArchive(archive, visible) {
+  document.getElementById("archive").hidden = !visible;
   document.getElementById("archive-grid").innerHTML = archive.map(entry => `
     <a class="entry-card archive-card" href="./recipe.html?type=archive&slug=${encodeURIComponent(entry.slug)}">
       ${cardImage(entry)}
@@ -73,8 +67,8 @@ function renderChart(shots) {
   `;
 }
 
-function renderEspresso() {
-  document.getElementById("espresso").hidden = !viewPrefs.espresso;
+function renderEspresso(entries, espresso, visible) {
+  document.getElementById("espresso").hidden = !visible;
   const stats = espressoStats(entries);
   document.getElementById("avg-rating").textContent = `${stats.avgRating.toFixed(1)} avg`;
   document.getElementById("avg-time").textContent = `${Math.round(stats.avgTime)}s`;
@@ -98,6 +92,14 @@ function renderEspresso() {
   `).join("");
 }
 
-renderRecipes();
-renderEspresso();
-renderArchive();
+async function render() {
+  const [entries, viewPrefs] = await Promise.all([loadEntries("public"), loadViewPrefs()]);
+  const recipes = entries.filter(entry => entry.type === "recipe");
+  const espresso = entries.filter(entry => entry.type === "espresso");
+  const archive = entries.filter(entry => entry.type === "archive");
+  renderRecipes(recipes, viewPrefs.recipe);
+  renderEspresso(entries, espresso, viewPrefs.espresso);
+  renderArchive(archive, viewPrefs.archive);
+}
+
+render();

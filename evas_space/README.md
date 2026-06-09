@@ -10,15 +10,16 @@ The site is designed as Eva's personal archive with two main notebooks:
 
 ## Current frontend behavior
 
-The frontend runs without a build step and without a backend:
+The frontend runs without a build step and is wired to a live Supabase backend:
 
-- `index.html` is the public homepage with the digital X-mark rose background, recipe archive, espresso dashboard, chart, and archive sections.
-- `recipe.html` renders either a cooked-food entry or an espresso entry based on `?type=...&slug=...`.
-- `editor.html` is the prototype studio with a dashboard, visibility toggles, stats, and separate edit view for all entry types.
-- `js/client.js` contains demo data and a localStorage persistence layer.
+- `index.html` is the public homepage with the digital X-mark rose background, recipe archive, espresso dashboard, chart, and archive sections. It reads only published entries.
+- `recipe.html` renders a cooked-food, espresso, or archive entry based on `?type=...&slug=...`.
+- `editor.html` is the Studio: sign-in gate, dashboard, visibility toggles, stats, and a separate edit view for all entry types.
+- `js/client.js` is the data layer. It uses `@supabase/supabase-js` (loaded from a CDN) for reads/writes/auth/storage, and falls back to demo data + localStorage when Supabase is not configured.
+- `js/supabase-config.js` holds the project URL and the public publishable key (safe to commit).
 - `css/style.css` contains the full responsive visual system.
 
-Until Supabase is connected, the editor stores changes only in the current browser's local storage. This is intentional for frontend development and works on GitHub Pages.
+Writes require Eva's authenticated Supabase session; public visitors get read-only access to published entries through row-level security.
 
 ## GitHub Pages limits
 

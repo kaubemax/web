@@ -1,14 +1,14 @@
 // ---------------------------------------------------------------------------
 // Supabase connection settings
 // ---------------------------------------------------------------------------
-// These two values are SAFE to commit publicly. The "anon" key is a
-// publishable key; write access is protected by Row-Level Security in the DB
-// (see schema.sql). Fill these in after creating your Supabase project:
+// These values are SAFE to commit publicly. The publishable key is a public
+// client key; all write access is protected by Row-Level Security + Auth in
+// the database (see schema.sql). Find them in:
 //   Supabase dashboard -> Project Settings -> API
 // ---------------------------------------------------------------------------
 
-window.SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
-window.SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+window.SUPABASE_URL = "https://bqmvzzowgctdzyxsniir.supabase.co";
+window.SUPABASE_ANON_KEY = "sb_publishable_W_SGDiIzBpy97i6xjytP1A_CuxDzRte";
 
-// Storage bucket name for recipe and espresso photos (created in setup step 3).
+// Public storage bucket for recipe, espresso, and archive photos.
 window.SUPABASE_BUCKET = "eva-media";

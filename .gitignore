@@ -13,3 +13,7 @@ desktop.ini
 .vscode/
 .idea/
 *.swp
+
+# Local tooling / MCP config (may contain tokens)
+.mcp.json
+.claude/settings.local.json

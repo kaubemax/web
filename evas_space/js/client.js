@@ -1,7 +1,33 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// ---------------------------------------------------------------------------
+// Connection
+// ---------------------------------------------------------------------------
 const STORE_KEY = "evas_space_entries_v1";
 const DEMO_MIGRATION_KEY = "evas_space_demo_migrated_v2";
 const VIEW_PREFS_KEY = "evas_space_view_prefs_v1";
 const ESPRESSO_DEFAULTS_KEY = "evas_space_espresso_defaults_v1";
+
+export function supabaseConfigured() {
+  return Boolean(
+    window.SUPABASE_URL &&
+    window.SUPABASE_ANON_KEY &&
+    !window.SUPABASE_URL.includes("YOUR-PROJECT-REF") &&
+    !window.SUPABASE_ANON_KEY.includes("YOUR-ANON")
+  );
+}
+
+export const supabaseEnabled = supabaseConfigured();
+const BUCKET = window.SUPABASE_BUCKET || "eva-media";
+
+export const sb = supabaseEnabled
+  ? createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    })
+  : null;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = value => typeof value === "string" && UUID_RE.test(value);
 
 export const archiveTypes = [
   { type: "recipe", label: "Cooked Food", plural: "recipes" },
@@ -9,6 +35,10 @@ export const archiveTypes = [
   { type: "archive", label: "Archive", plural: "archive notes" }
 ];
 
+// ---------------------------------------------------------------------------
+// Demo data (used as local fallback when Supabase is not configured, and as
+// one-click seed content once Eva is signed in).
+// ---------------------------------------------------------------------------
 export const demoEntries = [
   {
     id: "recipe-silk-tomato-rigatoni",
@@ -180,65 +210,334 @@ export const demoEntries = [
   }
 ];
 
-export function supabaseConfigured() {
-  return Boolean(
-    window.SUPABASE_URL &&
-    window.SUPABASE_ANON_KEY &&
-    !window.SUPABASE_URL.includes("YOUR-PROJECT-REF") &&
-    !window.SUPABASE_ANON_KEY.includes("YOUR-ANON")
-  );
+// ---------------------------------------------------------------------------
+// Auth (Supabase mode only)
+// ---------------------------------------------------------------------------
+export async function getUser() {
+  if (!sb) return null;
+  const { data } = await sb.auth.getSession();
+  return data.session?.user ?? null;
 }
 
-export function getEntries() {
-  const raw = localStorage.getItem(STORE_KEY);
-  if (!raw) return demoEntries;
+export function onAuthChange(callback) {
+  if (!sb) return () => {};
+  const { data } = sb.auth.onAuthStateChange((_event, session) => callback(session?.user ?? null));
+  return () => data.subscription.unsubscribe();
+}
+
+export async function signIn(email, password) {
+  if (!sb) throw new Error("Supabase is not configured.");
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+}
+
+export async function signOut() {
+  if (!sb) return;
+  await sb.auth.signOut();
+}
+
+// ---------------------------------------------------------------------------
+// Row <-> entry mapping
+// ---------------------------------------------------------------------------
+const num = value => (value === null || value === undefined || value === "" ? null : Number(value));
+
+function mapRecipe(row) {
+  return {
+    id: row.id,
+    type: "recipe",
+    title: row.title,
+    slug: row.slug,
+    category: row.category,
+    mood: row.mood || "",
+    intro: row.intro || "",
+    date: row.entry_date || "",
+    cover_url: row.cover_url || "",
+    published: row.published,
+    servings: row.servings || "",
+    prep_time: row.prep_time || "",
+    cook_time: row.cook_time || "",
+    ingredients: (row.recipe_ingredients || [])
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map(({ name, amount, unit, category, note }) => ({ name, amount, unit, category, note })),
+    steps: (row.recipe_steps || [])
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map(step => step.instruction),
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
+function mapEspresso(row) {
+  return {
+    id: row.id,
+    type: "espresso",
+    title: row.title,
+    slug: row.slug,
+    category: row.category,
+    mood: row.mood || "",
+    intro: row.intro || "",
+    date: row.entry_date || "",
+    cover_url: row.cover_url || "",
+    published: row.published,
+    bean: row.bean || "",
+    roaster: row.roaster || "",
+    machine: row.machine || "",
+    grinder: row.grinder || "",
+    dose_g: num(row.dose_g),
+    yield_g: num(row.yield_g),
+    time_s: num(row.time_s),
+    grind_setting: row.grind_setting || "",
+    water_temp_c: num(row.water_temp_c),
+    pressure_bar: num(row.pressure_bar),
+    acidity: num(row.acidity),
+    sweetness: num(row.sweetness),
+    body: num(row.body),
+    bitterness: num(row.bitterness),
+    rating: num(row.rating),
+    brew_ratio: num(row.brew_ratio),
+    notes: row.notes || "",
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
+function mapArchive(row) {
+  return {
+    id: row.id,
+    type: "archive",
+    title: row.title,
+    slug: row.slug,
+    category: row.category,
+    topic: row.topic || "",
+    mood: row.mood || "",
+    intro: row.intro || "",
+    body: row.body || "",
+    tags: row.tags || [],
+    date: row.entry_date || "",
+    cover_url: row.cover_url || "",
+    published: row.published,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
+function commonRow(entry) {
+  return {
+    title: entry.title,
+    slug: entry.slug,
+    category: entry.category,
+    mood: entry.mood || null,
+    intro: entry.intro || null,
+    entry_date: entry.date || null,
+    cover_url: entry.cover_url || null,
+    published: Boolean(entry.published)
+  };
+}
+
+const byDateDesc = (a, b) =>
+  new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0);
+
+// ---------------------------------------------------------------------------
+// Entries: read
+// ---------------------------------------------------------------------------
+// scope: "public" -> published entries only (homepage / detail pages)
+//        "owner"  -> all of the signed-in owner's rows (Studio)
+export async function loadEntries(scope = "public") {
+  const onlyPublished = scope === "public";
+  if (!sb) {
+    const all = localGetEntries();
+    return onlyPublished ? all.filter(entry => entry.published) : all;
+  }
   try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || !parsed.length) return demoEntries;
-    if (localStorage.getItem(DEMO_MIGRATION_KEY)) return parsed;
-    const existingIds = new Set(parsed.map(entry => entry.id));
-    const migrated = [...parsed, ...demoEntries.filter(entry => !existingIds.has(entry.id))];
-    saveEntries(migrated);
-    localStorage.setItem(DEMO_MIGRATION_KEY, "1");
-    return migrated;
-  } catch {
-    return demoEntries;
+    const recipeQuery = sb.from("recipes").select("*, recipe_ingredients(*), recipe_steps(*)");
+    const espressoQuery = sb.from("espresso_logs").select("*");
+    const archiveQuery = sb.from("archive_entries").select("*");
+    if (onlyPublished) {
+      recipeQuery.eq("published", true);
+      espressoQuery.eq("published", true);
+      archiveQuery.eq("published", true);
+    }
+    const [recipes, espresso, archive] = await Promise.all([recipeQuery, espressoQuery, archiveQuery]);
+    const firstError = recipes.error || espresso.error || archive.error;
+    if (firstError) throw firstError;
+    return [
+      ...recipes.data.map(mapRecipe),
+      ...espresso.data.map(mapEspresso),
+      ...archive.data.map(mapArchive)
+    ].sort(byDateDesc);
+  } catch (error) {
+    console.warn("Eva's Space: Supabase load failed, falling back to demo data.", error);
+    return onlyPublished ? [...demoEntries] : localGetEntries();
   }
 }
 
-export function saveEntries(entries) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(entries));
+// ---------------------------------------------------------------------------
+// Entries: write
+// ---------------------------------------------------------------------------
+export async function upsertEntry(entry) {
+  if (!sb) return localUpsertEntry(entry);
+  if (entry.type === "recipe") return saveRecipe(entry);
+  if (entry.type === "espresso") return saveEspresso(entry);
+  return saveArchive(entry);
 }
 
-export function upsertEntry(entry) {
-  const entries = getEntries().filter(item => item.id !== entry.id);
-  const next = [{ ...entry, updated_at: new Date().toISOString() }, ...entries];
-  saveEntries(next);
-  return entry;
+async function saveRecipe(entry) {
+  const row = {
+    ...commonRow(entry),
+    servings: entry.servings || null,
+    prep_time: entry.prep_time || null,
+    cook_time: entry.cook_time || null
+  };
+  if (isUuid(entry.id)) row.id = entry.id;
+
+  const { data, error } = await sb.from("recipes").upsert(row).select("id").single();
+  if (error) throw error;
+  const recipeId = data.id;
+
+  await Promise.all([
+    sb.from("recipe_ingredients").delete().eq("recipe_id", recipeId),
+    sb.from("recipe_steps").delete().eq("recipe_id", recipeId)
+  ]);
+
+  const ingredients = normalizeIngredients(entry.ingredients)
+    .filter(item => item.name)
+    .map((item, index) => ({ recipe_id: recipeId, position: index, ...item }));
+  const steps = normalizeSteps(entry.steps)
+    .map((instruction, index) => ({ recipe_id: recipeId, position: index, instruction }));
+
+  if (ingredients.length) {
+    const { error: ingError } = await sb.from("recipe_ingredients").insert(ingredients);
+    if (ingError) throw ingError;
+  }
+  if (steps.length) {
+    const { error: stepError } = await sb.from("recipe_steps").insert(steps);
+    if (stepError) throw stepError;
+  }
+  return recipeId;
 }
 
-export function deleteEntry(id) {
-  saveEntries(getEntries().filter(item => item.id !== id));
+async function saveEspresso(entry) {
+  const row = {
+    ...commonRow(entry),
+    bean: entry.bean || null,
+    roaster: entry.roaster || null,
+    machine: entry.machine || null,
+    grinder: entry.grinder || null,
+    dose_g: num(entry.dose_g),
+    yield_g: num(entry.yield_g),
+    time_s: num(entry.time_s),
+    grind_setting: entry.grind_setting || null,
+    water_temp_c: num(entry.water_temp_c),
+    pressure_bar: num(entry.pressure_bar),
+    acidity: num(entry.acidity),
+    sweetness: num(entry.sweetness),
+    body: num(entry.body),
+    bitterness: num(entry.bitterness),
+    rating: num(entry.rating),
+    notes: entry.notes || null
+  };
+  if (isUuid(entry.id)) row.id = entry.id;
+  const { data, error } = await sb.from("espresso_logs").upsert(row).select("id").single();
+  if (error) throw error;
+  return data.id;
 }
 
-export function resetDemoEntries() {
-  localStorage.removeItem(STORE_KEY);
-  localStorage.removeItem(DEMO_MIGRATION_KEY);
+async function saveArchive(entry) {
+  const row = {
+    ...commonRow(entry),
+    topic: entry.topic || null,
+    body: entry.body || null,
+    tags: normalizeTags(entry.tags)
+  };
+  if (isUuid(entry.id)) row.id = entry.id;
+  const { data, error } = await sb.from("archive_entries").upsert(row).select("id").single();
+  if (error) throw error;
+  return data.id;
 }
 
-export function getViewPrefs() {
-  const fallback = { recipe: true, espresso: true, archive: true };
-  try {
-    return { ...fallback, ...JSON.parse(localStorage.getItem(VIEW_PREFS_KEY) || "{}") };
-  } catch {
-    return fallback;
+const tableForType = type =>
+  type === "recipe" ? "recipes" : type === "espresso" ? "espresso_logs" : "archive_entries";
+
+export async function deleteEntry(id, type) {
+  if (!sb) return localDeleteEntry(id);
+  const { error } = await sb.from(tableForType(type)).delete().eq("id", id);
+  if (error) throw error;
+}
+
+// One-click sample content for a fresh, signed-in archive.
+export async function seedDemoData() {
+  if (!sb) {
+    resetLocalDemo();
+    return;
+  }
+  const existing = await loadEntries("owner");
+  const slugs = new Set(existing.map(entry => entry.slug));
+  for (const entry of demoEntries) {
+    if (slugs.has(entry.slug)) continue;
+    await upsertEntry({ ...entry, id: undefined });
   }
 }
 
-export function saveViewPrefs(prefs) {
-  localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs));
+// ---------------------------------------------------------------------------
+// Public homepage settings (section visibility)
+// ---------------------------------------------------------------------------
+const DEFAULT_PREFS = { recipe: true, espresso: true, archive: true };
+
+export async function loadViewPrefs() {
+  if (!sb) return localGetViewPrefs();
+  try {
+    const { data, error } = await sb
+      .from("public_settings")
+      .select("show_recipes, show_espresso, show_archive")
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return { ...DEFAULT_PREFS };
+    return { recipe: data.show_recipes, espresso: data.show_espresso, archive: data.show_archive };
+  } catch (error) {
+    console.warn("Eva's Space: could not load public settings.", error);
+    return { ...DEFAULT_PREFS };
+  }
 }
 
+export async function saveViewPrefs(prefs) {
+  if (!sb) return localSaveViewPrefs(prefs);
+  const user = await getUser();
+  if (!user) throw new Error("Sign in to change public visibility.");
+  const { error } = await sb.from("public_settings").upsert({
+    owner_id: user.id,
+    show_recipes: prefs.recipe,
+    show_espresso: prefs.espresso,
+    show_archive: prefs.archive
+  });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Media upload
+// ---------------------------------------------------------------------------
+export async function uploadMedia(file) {
+  if (!file) return "";
+  if (!sb) return imageToDataUrl(file);
+  const user = await getUser();
+  if (!user) return imageToDataUrl(file);
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const path = `${user.id}/${crypto.randomUUID()}.${ext || "jpg"}`;
+  const { error } = await sb.storage.from(BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type || undefined
+  });
+  if (error) throw error;
+  const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// ---------------------------------------------------------------------------
+// Espresso last-used defaults (local convenience, both modes)
+// ---------------------------------------------------------------------------
 export function getEspressoDefaults() {
   try {
     return JSON.parse(localStorage.getItem(ESPRESSO_DEFAULTS_KEY) || "{}");
@@ -257,6 +556,59 @@ export function saveEspressoDefaults(entry) {
   localStorage.setItem(ESPRESSO_DEFAULTS_KEY, JSON.stringify(defaults));
 }
 
+// ---------------------------------------------------------------------------
+// Local fallback persistence (when Supabase is not configured)
+// ---------------------------------------------------------------------------
+function localGetEntries() {
+  const raw = localStorage.getItem(STORE_KEY);
+  if (!raw) return [...demoEntries];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.length) return [...demoEntries];
+    if (localStorage.getItem(DEMO_MIGRATION_KEY)) return parsed;
+    const existingIds = new Set(parsed.map(entry => entry.id));
+    const migrated = [...parsed, ...demoEntries.filter(entry => !existingIds.has(entry.id))];
+    localStorage.setItem(STORE_KEY, JSON.stringify(migrated));
+    localStorage.setItem(DEMO_MIGRATION_KEY, "1");
+    return migrated;
+  } catch {
+    return [...demoEntries];
+  }
+}
+
+function localUpsertEntry(entry) {
+  const next = [
+    { ...entry, updated_at: new Date().toISOString() },
+    ...localGetEntries().filter(item => item.id !== entry.id)
+  ];
+  localStorage.setItem(STORE_KEY, JSON.stringify(next));
+  return entry.id;
+}
+
+function localDeleteEntry(id) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(localGetEntries().filter(item => item.id !== id)));
+}
+
+function resetLocalDemo() {
+  localStorage.removeItem(STORE_KEY);
+  localStorage.removeItem(DEMO_MIGRATION_KEY);
+}
+
+function localGetViewPrefs() {
+  try {
+    return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(VIEW_PREFS_KEY) || "{}") };
+  } catch {
+    return { ...DEFAULT_PREFS };
+  }
+}
+
+function localSaveViewPrefs(prefs) {
+  localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs));
+}
+
+// ---------------------------------------------------------------------------
+// Pure helpers
+// ---------------------------------------------------------------------------
 export function slugify(text) {
   return text
     .toString()

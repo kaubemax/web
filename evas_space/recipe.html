@@ -32,13 +32,11 @@
   </div>
 
   <script type="module">
-    import { esc, formatDate, formatIngredient, getEntries, normalizeIngredients, normalizeSteps, normalizeTags, recipeGradient } from "./js/client.js";
+    import { esc, formatDate, formatIngredient, loadEntries, normalizeIngredients, normalizeSteps, normalizeTags, recipeGradient } from "./js/client.js";
 
     const params = new URLSearchParams(location.search);
     const slug = params.get("slug");
     const type = params.get("type");
-    const entries = getEntries();
-    const entry = entries.find(item => item.slug === slug && (!type || item.type === type));
     const content = document.getElementById("content");
 
     function heroImage(item) {
@@ -164,8 +162,11 @@
       `;
     }
 
+    const entries = await loadEntries("public");
+    const entry = entries.find(item => item.slug === slug && (!type || item.type === type));
+
     if (!entry) {
-      content.innerHTML = `<article class="detail-page"><a class="back-link" href="./index.html">Back home</a><h1>Entry not found</h1><p class="lead">This entry is not available in the current local data.</p></article>`;
+      content.innerHTML = `<article class="detail-page"><a class="back-link" href="./index.html">Back home</a><h1>Entry not found</h1><p class="lead">This entry is not published yet, or the link is incorrect.</p></article>`;
     } else {
       document.title = `${entry.title} — Eva's Space`;
       content.innerHTML = entry.type === "espresso" ? espressoDetail(entry) : entry.type === "archive" ? archiveDetail(entry) : recipeDetail(entry);

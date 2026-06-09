@@ -19,7 +19,20 @@ Target GitHub Pages path:
 
 ## Current status
 
-Eva's Space is a static GitHub Pages-compatible personal archive. It currently runs fully without a backend by using demo data and `localStorage`.
+Eva's Space is a static GitHub Pages frontend wired to a live Supabase backend.
+
+- Backend is provisioned (project `bqmvzzowgctdzyxsniir`): all tables, RLS, the public `eva-media` storage bucket, analysis views, and security hardening are applied. See `schema.sql` for the canonical, idempotent copy.
+- Frontend is wired: `js/client.js` reads published entries for the public pages, gates the Studio behind Supabase Auth, writes structured rows, uploads photos to storage, and stores section visibility in `public_settings`.
+- If Supabase is ever unconfigured (placeholder values in `js/supabase-config.js`), the frontend transparently falls back to `localStorage` + demo data, so it still runs anywhere.
+
+### Remaining manual steps (Supabase dashboard)
+
+These two cannot be done from the repo and are required before the Studio can be used:
+
+1. Authentication -> Users -> Add user: create Eva's account (email + password).
+2. Authentication -> Providers/Sign-ups: disable public sign-ups.
+
+After signing in at `editor.html`, use **Load samples** to seed the demo entries, or just start creating real ones.
 
 Implemented archive types:
 
@@ -33,10 +46,11 @@ Implemented views:
 - `recipe.html`: detail page for all three entry types. The filename is legacy; it now renders recipes, espresso logs, and archive notes.
 - `editor.html`: private Studio prototype with Dashboard and separate Edit view.
 
-Important current limitation:
+Data layer:
 
-- This is still frontend-only. Data saved in Studio persists only in the current browser's `localStorage`.
-- Supabase wiring has not been implemented yet. The schema exists in `schema.sql`.
+- Studio writes go to Supabase (Postgres + Storage) under Eva's authenticated account.
+- Public pages read only `published = true` rows via RLS.
+- `localStorage` is now only a fallback for when Supabase is not configured.
 
 ## File map
 

@@ -23,6 +23,7 @@
         <a href="./index.html#espresso">Espresso</a>
         <a href="./index.html#archive">Archive</a>
         <a class="studio-link" href="./index.html">View site</a>
+        <a class="studio-link" id="signout-link" href="#" hidden>Sign out</a>
       </div>
     </nav>
 
@@ -30,7 +31,7 @@
       <aside class="studio-sidebar">
         <p class="eyebrow">Private studio</p>
         <h1>Write the archive.</h1>
-        <p>This prototype saves to this browser right now. Once Supabase is connected, the same fields map to database rows and image storage.</p>
+        <p>Entries are saved to Supabase as structured rows, and photos upload to the media bucket. Public visitors only ever see published entries.</p>
         <div class="mode-switch" role="tablist" aria-label="Entry type">
           <button id="recipe-mode" class="active" type="button">Cooked food</button>
           <button id="espresso-mode" type="button">Espresso</button>
@@ -45,6 +46,28 @@
 
       <section class="studio-main">
         <div id="app-msg"></div>
+
+        <section id="auth-gate" class="auth-gate" hidden>
+          <div class="auth-card">
+            <p class="eyebrow">Private studio</p>
+            <h2>Sign in to write</h2>
+            <p>Only Eva's account can create or edit entries. Public visitors can read published entries on the main site.</p>
+            <form id="login-form" class="auth-form">
+              <div class="field">
+                <label for="login-email">Email</label>
+                <input id="login-email" type="email" autocomplete="username" required>
+              </div>
+              <div class="field">
+                <label for="login-password">Password</label>
+                <input id="login-password" type="password" autocomplete="current-password" required>
+              </div>
+              <button class="btn" type="submit">Sign in</button>
+              <div id="login-msg"></div>
+            </form>
+          </div>
+        </section>
+
+        <div id="studio-body" hidden>
         <section class="dashboard-panel">
           <div class="section-head compact">
             <div>
@@ -96,7 +119,7 @@
             <div class="field">
               <label for="photo">Picture</label>
               <input id="photo" type="file" accept="image/*">
-              <div class="hint">Local prototype stores small image previews in browser storage. Supabase later stores full files in a public bucket.</div>
+              <div class="hint">Pictures upload to the Supabase media bucket and are served from a public URL.</div>
               <div id="photo-preview" class="photo-preview" hidden></div>
             </div>
           </div>
@@ -247,6 +270,7 @@
           </div>
           <div id="entry-list" class="editor-list"></div>
         </section>
+        </div>
       </section>
     </main>
   </div>
@@ -289,10 +313,11 @@
   </datalist>
 
   <script type="module">
-    import { archiveTypes, deleteEntry, entryStats, esc, formatDate, getEntries, getEspressoDefaults, getViewPrefs, imageToDataUrl, normalizeIngredients, normalizeSteps, normalizeTags, resetDemoEntries, saveEspressoDefaults, saveViewPrefs, slugify, supabaseConfigured, upsertEntry } from "./js/client.js";
+    import { archiveTypes, deleteEntry, entryStats, esc, formatDate, getEspressoDefaults, getUser, loadEntries, loadViewPrefs, normalizeIngredients, normalizeSteps, normalizeTags, onAuthChange, saveEspressoDefaults, saveViewPrefs, seedDemoData, signIn, signOut, slugify, supabaseEnabled, uploadMedia, upsertEntry } from "./js/client.js";
 
     const $ = id => document.getElementById(id);
     let currentPhoto = "";
+    let entriesCache = [];
 
     function message(text, type = "ok") {
       $("app-msg").innerHTML = text ? `<div class="msg ${type}">${esc(text)}</div>` : "";
@@ -405,8 +430,7 @@
       });
     }
 
-    function renderDashboard() {
-      const entries = getEntries();
+    function renderDashboard(entries, prefs) {
       const stats = entryStats(entries);
       $("stat-grid").innerHTML = [
         ["Published", stats.total],
@@ -422,7 +446,6 @@
         </div>
       `).join("");
 
-      const prefs = getViewPrefs();
       $("visibility-toggles").innerHTML = archiveTypes.map(item => `
         <label class="toggle visibility-toggle">
           <input type="checkbox" data-visibility="${esc(item.type)}" ${prefs[item.type] ? "checked" : ""}>
@@ -529,8 +552,7 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    function renderList() {
-      const entries = getEntries();
+    function renderList(entries) {
       $("entry-list").innerHTML = entries.map(entry => `
         <article class="editor-list-item">
           <div>
@@ -547,34 +569,59 @@
 
       $("entry-list").querySelectorAll("[data-edit]").forEach(button => {
         button.addEventListener("click", () => {
-          const entry = getEntries().find(item => item.id === button.dataset.edit);
+          const entry = entriesCache.find(item => item.id === button.dataset.edit);
           if (entry) loadEntry(entry);
         });
       });
       $("entry-list").querySelectorAll("[data-delete]").forEach(button => {
-        button.addEventListener("click", () => {
-          if (!confirm("Delete this local entry?")) return;
-          deleteEntry(button.dataset.delete);
-          renderDashboard();
-          renderList();
-          message("Entry deleted.");
+        button.addEventListener("click", async () => {
+          if (!confirm("Delete this entry?")) return;
+          const entry = entriesCache.find(item => item.id === button.dataset.delete);
+          try {
+            await deleteEntry(button.dataset.delete, entry?.type);
+            await refresh();
+            message("Entry deleted.");
+          } catch (error) {
+            message(error.message || "Could not delete entry.", "error");
+          }
         });
       });
     }
 
+    async function refresh() {
+      const [entries, prefs] = await Promise.all([loadEntries("owner"), loadViewPrefs()]);
+      entriesCache = entries;
+      renderDashboard(entries, prefs);
+      renderList(entries);
+    }
+
+    function currentTogglePrefs() {
+      return {
+        recipe: $("visibility-toggles").querySelector('[data-visibility="recipe"]')?.checked ?? true,
+        espresso: $("visibility-toggles").querySelector('[data-visibility="espresso"]')?.checked ?? true,
+        archive: $("visibility-toggles").querySelector('[data-visibility="archive"]')?.checked ?? true
+      };
+    }
+
+    // ----- Event listeners (attached once) -----
     $("recipe-mode").addEventListener("click", () => startNew("recipe"));
     $("espresso-mode").addEventListener("click", () => startNew("espresso"));
     $("archive-mode").addEventListener("click", () => startNew("archive"));
     $("open-new").addEventListener("click", () => startNew());
     $("close-form").addEventListener("click", () => showForm(false));
     $("reset-btn").addEventListener("click", () => startNew($("entry-type").value));
-    $("visibility-toggles").addEventListener("change", event => {
+
+    $("visibility-toggles").addEventListener("change", async event => {
       if (!event.target.matches("[data-visibility]")) return;
-      const prefs = getViewPrefs();
-      prefs[event.target.dataset.visibility] = event.target.checked;
-      saveViewPrefs(prefs);
-      message("Visibility setting saved locally. Refresh the public page to see it.");
+      try {
+        await saveViewPrefs(currentTogglePrefs());
+        message("Visibility saved. Refresh the public page to see it.");
+      } catch (error) {
+        event.target.checked = !event.target.checked;
+        message(error.message || "Could not save visibility.", "error");
+      }
     });
+
     $("add-ingredient").addEventListener("click", () => {
       $("ingredient-rows").insertAdjacentHTML("beforeend", ingredientRowTemplate());
       $("ingredient-rows").querySelector(".ingredient-row:last-child [data-ingredient='amount']").focus();
@@ -605,13 +652,18 @@
       $("ingredient-rows").insertAdjacentHTML("beforeend", ingredientRowTemplate());
       $("ingredient-rows").querySelector(".ingredient-row:last-child [data-ingredient='amount']").focus();
     });
-    $("clear-local").addEventListener("click", () => {
-      if (!confirm("Reset local demo entries?")) return;
-      resetDemoEntries();
-      resetForm();
-      renderDashboard();
-      renderList();
-      message("Demo data restored.");
+
+    $("clear-local").addEventListener("click", async () => {
+      const confirmText = supabaseEnabled ? "Add the sample entries to your archive?" : "Reset local demo entries?";
+      if (!confirm(confirmText)) return;
+      try {
+        await seedDemoData();
+        if (!supabaseEnabled) resetForm();
+        await refresh();
+        message(supabaseEnabled ? "Sample entries added." : "Demo data restored.");
+      } catch (error) {
+        message(error.message || "Could not load sample data.", "error");
+      }
     });
 
     ["acidity", "sweetness", "body", "bitterness"].forEach(id => {
@@ -621,35 +673,88 @@
     $("photo").addEventListener("change", async () => {
       const file = $("photo").files[0];
       if (!file) return;
-      currentPhoto = await imageToDataUrl(file);
-      $("photo-preview").style.backgroundImage = `url('${currentPhoto}')`;
-      $("photo-preview").hidden = false;
+      try {
+        message("Uploading picture...");
+        currentPhoto = await uploadMedia(file);
+        $("photo-preview").style.backgroundImage = `url('${currentPhoto}')`;
+        $("photo-preview").hidden = false;
+        message("");
+      } catch (error) {
+        message(error.message || "Could not upload picture.", "error");
+      }
     });
 
-    $("entry-form").addEventListener("submit", event => {
+    $("entry-form").addEventListener("submit", async event => {
       event.preventDefault();
       const entry = entryFromForm();
       if (entry.type === "espresso") saveEspressoDefaults(entry);
-      upsertEntry(entry);
-      renderDashboard();
-      renderList();
-      message("Saved locally. Supabase will replace this persistence layer later.");
-      resetForm(entry.type);
-      showForm(false);
+      try {
+        await upsertEntry(entry);
+        await refresh();
+        message("Entry saved.");
+        resetForm(entry.type);
+        showForm(false);
+      } catch (error) {
+        message(error.message || "Could not save entry.", "error");
+      }
     });
 
-    if (supabaseConfigured()) {
+    $("login-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      $("login-msg").innerHTML = "";
+      try {
+        await signIn($("login-email").value.trim(), $("login-password").value);
+        // onAuthChange handles showing the studio.
+      } catch (error) {
+        $("login-msg").innerHTML = `<div class="msg error">${esc(error.message || "Sign in failed.")}</div>`;
+      }
+    });
+
+    $("signout-link").addEventListener("click", async event => {
+      event.preventDefault();
+      await signOut();
+    });
+
+    // ----- Boot -----
+    $("clear-local").textContent = supabaseEnabled ? "Load samples" : "Reset demo";
+
+    function showGate() {
+      $("auth-gate").hidden = false;
+      $("studio-body").hidden = true;
+      $("signout-link").hidden = true;
       $("backend-title").textContent = "Supabase configured";
-      $("backend-copy").textContent = "Next implementation step: replace localStorage calls with authenticated Supabase reads and writes.";
-      $("status-dot").classList.add("online");
+      $("backend-copy").textContent = "Sign in with Eva's account to load and edit the live archive.";
     }
 
-    const requestedType = new URLSearchParams(location.search).get("type");
-    const initialType = ["recipe", "espresso", "archive"].includes(requestedType) ? requestedType : "recipe";
-    resetForm(initialType);
-    renderDashboard();
-    renderList();
-    if (requestedType) showForm(true);
+    async function showStudio() {
+      $("auth-gate").hidden = true;
+      $("studio-body").hidden = false;
+      $("signout-link").hidden = !supabaseEnabled;
+      if (supabaseEnabled) {
+        $("backend-title").textContent = "Supabase connected";
+        $("backend-copy").textContent = "Live database. Entries, photos, and visibility save to Supabase with row-level security.";
+        $("status-dot").classList.add("online");
+      }
+      await refresh();
+      const requestedType = new URLSearchParams(location.search).get("type");
+      const initialType = ["recipe", "espresso", "archive"].includes(requestedType) ? requestedType : "recipe";
+      resetForm(initialType);
+      if (requestedType) showForm(true);
+    }
+
+    if (!supabaseEnabled) {
+      await showStudio();
+    } else {
+      showGate();
+      onAuthChange(async user => {
+        if (user) {
+          await showStudio();
+        } else {
+          showGate();
+        }
+      });
+    }
+
   </script>
 </body>
 </html>
