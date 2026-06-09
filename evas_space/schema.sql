@@ -39,7 +39,8 @@ create table if not exists public.recipes (
   published    boolean not null default false,
   servings     text,
   prep_time    text,
-  cook_time    text
+  cook_time    text,
+  rating       smallint check (rating between 1 and 5)
 );
 
 drop trigger if exists trg_recipes_updated_at on public.recipes;
@@ -279,6 +280,29 @@ create policy "auth update eva media"
 drop policy if exists "auth delete eva media" on storage.objects;
 create policy "auth delete eva media"
   on storage.objects for delete to authenticated using (bucket_id = 'eva-media');
+
+-- ---------------------------------------------------------------------------
+-- Visitor counter (cookieless, privacy-friendly): timestamp + day + path only,
+-- no IP and no cookie. Anyone may record a hit; only the owner reads aggregates.
+-- ---------------------------------------------------------------------------
+create table if not exists public.page_hits (
+  id     bigint generated always as identity primary key,
+  hit_at timestamptz not null default now(),
+  day    date not null default current_date,
+  path   text
+);
+
+create index if not exists idx_page_hits_day on public.page_hits(day);
+
+alter table public.page_hits enable row level security;
+
+drop policy if exists "anyone can record a hit" on public.page_hits;
+create policy "anyone can record a hit"
+  on public.page_hits for insert to anon, authenticated
+  with check (path is null or char_length(path) <= 255);
+drop policy if exists "owner can read hits" on public.page_hits;
+create policy "owner can read hits"
+  on public.page_hits for select to authenticated using (true);
 
 -- ---------------------------------------------------------------------------
 -- Analysis-ready views (security_invoker => respect the caller's RLS).

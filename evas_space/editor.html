@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Studio — Eva's Space</title>
 <meta name="robots" content="noindex">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./css/style.css">
 <script src="./js/supabase-config.js"></script>
 </head>
@@ -77,6 +74,13 @@
             <button class="btn" id="open-new" type="button">New entry</button>
           </div>
           <div id="stat-grid" class="stat-grid"></div>
+          <div id="visitor-stat" class="visitor-stat" hidden>
+            <div>
+              <span class="metric-label">Visitors (page views)</span>
+              <strong id="visitor-total">0</strong>
+            </div>
+            <span id="visitor-today" class="visitor-today"></span>
+          </div>
           <div class="visibility-panel">
             <div>
               <h3>Public archive visibility</h3>
@@ -137,6 +141,17 @@
               <div class="field">
                 <label for="cook_time">Cook time</label>
                 <input id="cook_time" type="text" placeholder="35 min">
+              </div>
+            </div>
+            <div class="field">
+              <label>Rating</label>
+              <div id="recipe-rating" class="star-input" role="radiogroup" aria-label="Recipe rating">
+                <button type="button" class="star-btn" data-star="1" aria-label="1 star">★</button>
+                <button type="button" class="star-btn" data-star="2" aria-label="2 stars">★</button>
+                <button type="button" class="star-btn" data-star="3" aria-label="3 stars">★</button>
+                <button type="button" class="star-btn" data-star="4" aria-label="4 stars">★</button>
+                <button type="button" class="star-btn" data-star="5" aria-label="5 stars">★</button>
+                <button type="button" class="star-reset" data-star="0">Clear</button>
               </div>
             </div>
             <div class="structured-block">
@@ -264,15 +279,27 @@
           <div class="section-head compact">
             <div>
               <p class="eyebrow">Current entries</p>
-              <h2>Local archive</h2>
+              <h2>Your archive</h2>
             </div>
-            <button class="text-link danger-link" id="clear-local" type="button">Reset demo</button>
+            <div class="entries-actions">
+              <button class="text-link danger-link" id="wipe-all" type="button" hidden>Wipe all</button>
+              <button class="text-link danger-link" id="clear-local" type="button">Reset demo</button>
+            </div>
           </div>
           <div id="entry-list" class="editor-list"></div>
         </section>
         </div>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <span>© Eva's Space — private studio</span>
+      <nav aria-label="Legal">
+        <a href="../impressum.html">Impressum</a>
+        <a href="../datenschutz.html">Datenschutz</a>
+        <a href="./index.html">View site</a>
+      </nav>
+    </footer>
   </div>
 
   <datalist id="unit-options">
@@ -313,11 +340,18 @@
   </datalist>
 
   <script type="module">
-    import { archiveTypes, deleteEntry, entryStats, esc, formatDate, getEspressoDefaults, getUser, loadEntries, loadViewPrefs, normalizeIngredients, normalizeSteps, normalizeTags, onAuthChange, saveEspressoDefaults, saveViewPrefs, seedDemoData, signIn, signOut, slugify, supabaseEnabled, uploadMedia, upsertEntry } from "./js/client.js";
+    import { archiveTypes, deleteEntry, entryStats, esc, formatDate, getEspressoDefaults, getUser, loadEntries, loadViewPrefs, loadVisitStats, normalizeIngredients, normalizeSteps, normalizeTags, onAuthChange, saveEspressoDefaults, saveViewPrefs, seedDemoData, signIn, signOut, slugify, supabaseEnabled, uploadMedia, upsertEntry, wipeAllEntries } from "./js/client.js";
 
     const $ = id => document.getElementById(id);
     let currentPhoto = "";
     let entriesCache = [];
+    let currentRating = 0;
+
+    function renderRecipeStars() {
+      $("recipe-rating").querySelectorAll(".star-btn").forEach(button => {
+        button.classList.toggle("on", Number(button.dataset.star) <= currentRating);
+      });
+    }
 
     function message(text, type = "ok") {
       $("app-msg").innerHTML = text ? `<div class="msg ${type}">${esc(text)}</div>` : "";
@@ -349,6 +383,8 @@
       $("photo-preview").style.backgroundImage = "";
       setMode(type);
       setRecipeRows([], []);
+      currentRating = 0;
+      renderRecipeStars();
       if (type === "espresso") applyEspressoDefaults();
       updateRangeValues();
     }
@@ -438,7 +474,8 @@
         ["Espresso logs", stats.espresso],
         ["Archive notes", stats.archive],
         ["Ingredients tracked", stats.ingredientCount],
-        ["Avg espresso", stats.avgEspressoRating.toFixed(1)]
+        ["Avg espresso", stats.avgEspressoRating.toFixed(1)],
+        ["Avg food", stats.avgFoodRating ? `${stats.avgFoodRating.toFixed(1)}/5` : "–"]
       ].map(([label, value]) => `
         <div class="dashboard-stat">
           <span>${esc(label)}</span>
@@ -485,6 +522,7 @@
           servings: $("servings").value.trim(),
           prep_time: $("prep_time").value.trim(),
           cook_time: $("cook_time").value.trim(),
+          rating: currentRating || null,
           ingredients: collectIngredients(),
           steps: collectSteps()
         };
@@ -539,6 +577,8 @@
         $("servings").value = entry.servings || "";
         $("prep_time").value = entry.prep_time || "";
         $("cook_time").value = entry.cook_time || "";
+        currentRating = Number(entry.rating) || 0;
+        renderRecipeStars();
         setRecipeRows(entry.ingredients, entry.steps);
       } else if (entry.type === "archive") {
         $("topic").value = entry.topic || "";
@@ -593,6 +633,14 @@
       entriesCache = entries;
       renderDashboard(entries, prefs);
       renderList(entries);
+      if (supabaseEnabled) refreshVisitorStats();
+    }
+
+    async function refreshVisitorStats() {
+      const { total, today } = await loadVisitStats();
+      $("visitor-total").textContent = total.toLocaleString();
+      $("visitor-today").textContent = `${today.toLocaleString()} today`;
+      $("visitor-stat").hidden = false;
     }
 
     function currentTogglePrefs() {
@@ -653,6 +701,13 @@
       $("ingredient-rows").querySelector(".ingredient-row:last-child [data-ingredient='amount']").focus();
     });
 
+    $("recipe-rating").addEventListener("click", event => {
+      const button = event.target.closest("[data-star]");
+      if (!button) return;
+      currentRating = Number(button.dataset.star);
+      renderRecipeStars();
+    });
+
     $("clear-local").addEventListener("click", async () => {
       const confirmText = supabaseEnabled ? "Add the sample entries to your archive?" : "Reset local demo entries?";
       if (!confirm(confirmText)) return;
@@ -663,6 +718,20 @@
         message(supabaseEnabled ? "Sample entries added." : "Demo data restored.");
       } catch (error) {
         message(error.message || "Could not load sample data.", "error");
+      }
+    });
+
+    $("wipe-all").addEventListener("click", async () => {
+      if (!confirm("Delete ALL of your entries? This cannot be undone.")) return;
+      if (!confirm("Really delete everything? Last chance.")) return;
+      try {
+        await wipeAllEntries();
+        resetForm();
+        showForm(false);
+        await refresh();
+        message("All entries deleted.");
+      } catch (error) {
+        message(error.message || "Could not delete entries.", "error");
       }
     });
 
@@ -717,6 +786,7 @@
 
     // ----- Boot -----
     $("clear-local").textContent = supabaseEnabled ? "Load samples" : "Reset demo";
+    $("wipe-all").hidden = !supabaseEnabled;
 
     function showGate() {
       $("auth-gate").hidden = false;

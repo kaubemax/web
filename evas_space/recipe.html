@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Entry — Eva's Space</title>
 <meta name="description" content="A recipe or espresso note from Eva's Space.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./css/style.css">
 <script src="./js/supabase-config.js"></script>
 </head>
@@ -29,11 +26,21 @@
     <main id="content" class="detail-wrap">
       <p class="muted">Loading entry...</p>
     </main>
+
+    <footer class="site-footer">
+      <span>© Eva's Space — personal archive</span>
+      <nav aria-label="Legal">
+        <a href="../impressum.html">Impressum</a>
+        <a href="../datenschutz.html">Datenschutz</a>
+        <a href="./index.html">Home</a>
+      </nav>
+    </footer>
   </div>
 
   <script type="module">
-    import { esc, formatDate, formatIngredient, loadEntries, normalizeIngredients, normalizeSteps, normalizeTags, recipeGradient } from "./js/client.js";
+    import { esc, formatDate, formatIngredient, loadEntries, normalizeIngredients, normalizeSteps, normalizeTags, recipeGradient, recordHit, starRating } from "./js/client.js";
 
+    recordHit();
     const params = new URLSearchParams(location.search);
     const slug = params.get("slug");
     const type = params.get("type");
@@ -61,6 +68,7 @@
           <div class="detail-header">
             <p class="eyebrow">${esc(formatDate(item.date || item.created_at))}</p>
             <h1>${esc(item.title)}</h1>
+            ${item.rating ? `<div class="detail-rating">${starRating(item.rating)}</div>` : ""}
             <div class="recipe-meta">${meta}</div>
             ${item.intro ? `<p class="lead">${esc(item.intro)}</p>` : ""}
           </div>

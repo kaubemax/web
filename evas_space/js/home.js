@@ -1,7 +1,10 @@
-import { esc, espressoStats, formatDate, loadEntries, loadViewPrefs, normalizeTags, recipeGradient } from "./client.js";
+import { esc, espressoStats, formatDate, loadEntries, loadViewPrefs, normalizeTags, recipeGradient, recordHit, starRating } from "./client.js";
 import { renderRoseBanner } from "./rose-banner.js";
 
 renderRoseBanner();
+recordHit();
+
+let allArchive = [];
 
 function cardImage(entry) {
   if (entry.cover_url) {
@@ -10,8 +13,7 @@ function cardImage(entry) {
   return `<div class="entry-image generated" style="background:${recipeGradient(entry.title)}"><span>${esc(entry.title.slice(0, 1))}</span></div>`;
 }
 
-function renderRecipes(recipes, visible) {
-  document.getElementById("recipes").hidden = !visible;
+function renderRecipes(recipes) {
   document.getElementById("recipe-grid").innerHTML = recipes.map(entry => `
     <a class="entry-card" href="./recipe.html?type=recipe&slug=${encodeURIComponent(entry.slug)}">
       ${cardImage(entry)}
@@ -21,16 +23,20 @@ function renderRecipes(recipes, visible) {
         <p>${esc(entry.intro || "")}</p>
         <div class="entry-meta">
           <span>${esc(formatDate(entry.date || entry.created_at))}</span>
-          <span>${esc(entry.cook_time || entry.prep_time || "")}</span>
+          ${entry.rating ? starRating(entry.rating) : `<span>${esc(entry.cook_time || entry.prep_time || "")}</span>`}
         </div>
       </div>
     </a>
   `).join("");
 }
 
-function renderArchive(archive, visible) {
-  document.getElementById("archive").hidden = !visible;
-  document.getElementById("archive-grid").innerHTML = archive.map(entry => `
+function renderArchive(archive) {
+  const grid = document.getElementById("archive-grid");
+  if (!archive.length) {
+    grid.innerHTML = `<p class="muted empty-note">No matching notes.</p>`;
+    return;
+  }
+  grid.innerHTML = archive.map(entry => `
     <a class="entry-card archive-card" href="./recipe.html?type=archive&slug=${encodeURIComponent(entry.slug)}">
       ${cardImage(entry)}
       <div class="entry-card-body">
@@ -67,8 +73,7 @@ function renderChart(shots) {
   `;
 }
 
-function renderEspresso(entries, espresso, visible) {
-  document.getElementById("espresso").hidden = !visible;
+function renderEspresso(entries, espresso) {
   const stats = espressoStats(entries);
   document.getElementById("avg-rating").textContent = `${stats.avgRating.toFixed(1)} avg`;
   document.getElementById("avg-time").textContent = `${Math.round(stats.avgTime)}s`;
@@ -92,14 +97,34 @@ function renderEspresso(entries, espresso, visible) {
   `).join("");
 }
 
+function filterArchive(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return allArchive;
+  return allArchive.filter(entry => {
+    const haystack = [entry.title, entry.topic, entry.intro, entry.body, normalizeTags(entry.tags).join(" ")]
+      .filter(Boolean).join(" ").toLowerCase();
+    return haystack.includes(q);
+  });
+}
+
 async function render() {
   const [entries, viewPrefs] = await Promise.all([loadEntries("public"), loadViewPrefs()]);
   const recipes = entries.filter(entry => entry.type === "recipe");
   const espresso = entries.filter(entry => entry.type === "espresso");
-  const archive = entries.filter(entry => entry.type === "archive");
-  renderRecipes(recipes, viewPrefs.recipe);
-  renderEspresso(entries, espresso, viewPrefs.espresso);
-  renderArchive(archive, viewPrefs.archive);
+  allArchive = entries.filter(entry => entry.type === "archive");
+
+  document.getElementById("recipes").hidden = !viewPrefs.recipe;
+  document.getElementById("espresso").hidden = !viewPrefs.espresso;
+  document.getElementById("archive").hidden = !viewPrefs.archive;
+
+  renderRecipes(recipes);
+  renderEspresso(entries, espresso);
+  renderArchive(allArchive);
+
+  const search = document.getElementById("archive-search");
+  if (search) {
+    search.addEventListener("input", () => renderArchive(filterArchive(search.value)));
+  }
 }
 
 render();

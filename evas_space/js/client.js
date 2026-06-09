@@ -256,6 +256,7 @@ function mapRecipe(row) {
     servings: row.servings || "",
     prep_time: row.prep_time || "",
     cook_time: row.cook_time || "",
+    rating: num(row.rating),
     ingredients: (row.recipe_ingredients || [])
       .slice()
       .sort((a, b) => a.position - b.position)
@@ -388,7 +389,8 @@ async function saveRecipe(entry) {
     ...commonRow(entry),
     servings: entry.servings || null,
     prep_time: entry.prep_time || null,
-    cook_time: entry.cook_time || null
+    cook_time: entry.cook_time || null,
+    rating: num(entry.rating)
   };
   if (isUuid(entry.id)) row.id = entry.id;
 
@@ -477,6 +479,49 @@ export async function seedDemoData() {
   for (const entry of demoEntries) {
     if (slugs.has(entry.slug)) continue;
     await upsertEntry({ ...entry, id: undefined });
+  }
+}
+
+// Delete every entry owned by the signed-in account (RLS limits this to Eva's
+// own rows). Recipe children cascade via the foreign key.
+export async function wipeAllEntries() {
+  if (!sb) {
+    resetLocalDemo();
+    return;
+  }
+  const allTime = "1970-01-01";
+  for (const table of ["recipes", "espresso_logs", "archive_entries"]) {
+    const { error } = await sb.from(table).delete().gte("created_at", allTime);
+    if (error) throw error;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Visitor counter (cookieless, no PII: a timestamp + day bucket + path)
+// ---------------------------------------------------------------------------
+export async function recordHit(path = location.pathname) {
+  if (!sb) return;
+  try {
+    // No .select() -> "return=minimal", so anon needs no read access.
+    await sb.from("page_hits").insert({ path });
+  } catch (error) {
+    console.warn("Eva's Space: could not record visit.", error);
+  }
+}
+
+export async function loadVisitStats() {
+  if (!sb) return { total: 0, today: 0 };
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const [all, day] = await Promise.all([
+      sb.from("page_hits").select("*", { count: "exact", head: true }),
+      sb.from("page_hits").select("*", { count: "exact", head: true }).eq("day", today)
+    ]);
+    if (all.error || day.error) throw all.error || day.error;
+    return { total: all.count ?? 0, today: day.count ?? 0 };
+  } catch (error) {
+    console.warn("Eva's Space: could not load visit stats.", error);
+    return { total: 0, today: 0 };
   }
 }
 
@@ -675,6 +720,17 @@ export function formatIngredient(item) {
   return [main, item.note].filter(Boolean).join(" - ");
 }
 
+// 1-5 star rating as inline markup (uses the U+2605 star glyph, not an emoji).
+export function starRating(value, max = 5) {
+  const filled = Math.max(0, Math.min(max, Math.round(Number(value) || 0)));
+  if (!filled) return "";
+  let out = `<span class="stars" role="img" aria-label="${filled} out of ${max} stars">`;
+  for (let i = 1; i <= max; i += 1) {
+    out += `<span class="star${i <= filled ? " on" : ""}" aria-hidden="true">★</span>`;
+  }
+  return `${out}</span>`;
+}
+
 export function formatDate(date) {
   if (!date) return "";
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(date));
@@ -727,6 +783,10 @@ export function entryStats(entries) {
   const ingredientCount = recipes.reduce((sum, recipe) => sum + normalizeIngredients(recipe.ingredients).length, 0);
   const avgRecipeIngredients = recipes.length ? ingredientCount / recipes.length : 0;
   const coffee = espressoStats(published);
+  const ratedRecipes = recipes.filter(recipe => Number(recipe.rating) > 0);
+  const avgFoodRating = ratedRecipes.length
+    ? ratedRecipes.reduce((sum, recipe) => sum + Number(recipe.rating), 0) / ratedRecipes.length
+    : 0;
 
   return {
     total: published.length,
@@ -735,6 +795,7 @@ export function entryStats(entries) {
     archive: archive.length,
     ingredientCount,
     avgRecipeIngredients,
-    avgEspressoRating: coffee.avgRating
+    avgEspressoRating: coffee.avgRating,
+    avgFoodRating
   };
 }

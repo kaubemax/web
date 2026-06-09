@@ -1,3 +1,28 @@
+/* Self-hosted fonts (no third-party requests; DSGVO-friendly).
+   Inter is a variable font covering weights 100-900. Latin subset covers
+   German umlauts (ä ö ü ß live in U+00xx). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/inter-latin-variable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/instrument-serif-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/instrument-serif-italic-latin.woff2") format("woff2");
+}
+
 :root {
   --paper: #f7f2e9;
   --paper-2: #eee4d6;
@@ -1580,5 +1605,148 @@ svg {
   .xmark {
     opacity: .86;
     filter: brightness(1);
+  }
+}
+
+/* ===========================================================================
+   Stars, search, visitor stat, footer (added with backend features)
+   =========================================================================== */
+
+/* Star rating display (read-only) */
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  line-height: 1;
+}
+.stars .star {
+  color: rgba(32, 29, 27, .2);
+  font-size: 1em;
+}
+.stars .star.on {
+  color: var(--gold);
+}
+.detail-rating {
+  margin: 6px 0 2px;
+  font-size: 1.4rem;
+}
+
+/* Star rating input (editor) */
+.star-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.star-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1.7rem;
+  line-height: 1;
+  padding: 2px;
+  color: rgba(32, 29, 27, .22);
+  transition: color .12s ease, transform .12s ease;
+}
+.star-btn:hover {
+  transform: translateY(-1px);
+}
+.star-btn.on {
+  color: var(--gold);
+}
+.star-reset {
+  margin-left: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: .85rem;
+  color: var(--soft-ink);
+  text-decoration: underline;
+}
+
+/* Archive search */
+.archive-search-wrap {
+  margin: 0 0 18px;
+}
+#archive-search {
+  width: 100%;
+  max-width: 420px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--cream);
+  font: inherit;
+  color: var(--ink);
+}
+#archive-search:focus {
+  outline: none;
+  border-color: var(--rose);
+}
+.empty-note {
+  padding: 8px 0;
+}
+
+/* Visitor stat tile (studio dashboard) */
+.visitor-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--cream);
+}
+.visitor-stat .metric-label {
+  display: block;
+}
+#visitor-total {
+  font-family: var(--serif);
+  font-size: 2rem;
+}
+.visitor-today {
+  color: var(--soft-ink);
+  font-weight: 600;
+  font-size: .9rem;
+}
+
+.entries-actions {
+  display: inline-flex;
+  gap: 16px;
+  align-items: center;
+}
+
+/* Site footer with legal links */
+.site-footer {
+  margin-top: 48px;
+  padding: 28px 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--soft-ink);
+  font-size: .9rem;
+}
+.site-footer nav {
+  display: inline-flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.site-footer a {
+  color: var(--soft-ink);
+  text-decoration: none;
+}
+.site-footer a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .site-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 }
