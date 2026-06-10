@@ -330,12 +330,14 @@ svg {
 
 .rose-x-banner {
   /* Tunable bloom-wave knobs (live-editable via the ?tune panel). */
-  --wave-dur: 15s;          /* time for the light to sweep one full cycle */
-  --glow-strength: .85;     /* overall brightness of the sweep (0–1) */
-  --band-1: 1100px;         /* spacing of the main light band */
-  --band-2: 720px;          /* spacing of the counter band (organic interference) */
-  --glow-1: rgba(255, 244, 235, .9);
+  --wave-dur: 8s;           /* time for the light to sweep one full cycle */
+  --glow-strength: .42;     /* overall brightness of the sweep (0–1) */
+  --band-1: 920px;          /* spacing of the main light band */
+  --band-2: 590px;          /* spacing of the counter band (organic interference) */
+  --band-3: 1330px;         /* third band — breaks up the regular stripe feel */
+  --glow-1: rgba(255, 244, 235, .85);
   --glow-2: rgba(255, 232, 224, .7);
+  --glow-3: rgba(255, 240, 230, .6);
 
   position: absolute;
   inset: 0;
@@ -369,18 +371,19 @@ svg {
      repeats are seamless and a one-band shift loops perfectly. */
   background-image:
     linear-gradient(to right, transparent 0%, var(--glow-1) 50%, transparent 100%),
-    linear-gradient(to right, transparent 0%, var(--glow-2) 50%, transparent 100%);
-  background-size: var(--band-1) 100%, var(--band-2) 100%;
+    linear-gradient(to right, transparent 0%, var(--glow-2) 50%, transparent 100%),
+    linear-gradient(to right, transparent 0%, var(--glow-3) 50%, transparent 100%);
+  background-size: var(--band-1) 100%, var(--band-2) 100%, var(--band-3) 100%;
   background-repeat: repeat;
-  animation: bloom-sweep var(--wave-dur, 15s) linear infinite;
+  animation: bloom-sweep var(--wave-dur, 8s) linear infinite;
 }
 
 /* Each layer translates by exactly one of its own band widths per cycle, so
-   both loop seamlessly; opposite directions keep it from looking like a
-   marching pattern. */
+   every band loops seamlessly; mixed directions and three different widths
+   keep it from reading as a marching stripe. */
 @keyframes bloom-sweep {
-  from { background-position: 0 0, 0 0; }
-  to   { background-position: var(--band-1) 0, calc(var(--band-2) * -1) 0; }
+  from { background-position: 0 0, 0 0, 0 0; }
+  to   { background-position: var(--band-1) 0, calc(var(--band-2) * -1) 0, var(--band-3) 0; }
 }
 
 .rose-x-banner__svg {

@@ -184,16 +184,33 @@ export function renderRoseBanner(root = document) {
   }
 }
 
+// Render a single large rose into an SVG (viewBox "0 0 600 600"). Used by the
+// rose lab page to show the bloom shape in isolation.
+export function renderRoseCloseup(svg, palette, angle = 0, rx = 250, ry = 230) {
+  if (!svg) return;
+  const marks = [];
+  addRose(marks, 300, 300, rx, ry, palette, angle);
+  const unique = new Map();
+  marks.forEach(mark => {
+    const key = `${mark.x},${mark.y}`;
+    if (!unique.has(key)) unique.set(key, mark);
+  });
+  const fragment = document.createDocumentFragment();
+  [...unique.values()].forEach(mark => fragment.appendChild(createXMark(mark)));
+  svg.replaceChildren(fragment);
+}
+
 // ---------------------------------------------------------------------------
 // Live tuning panel — open the homepage with ?tune to dial in the bloom wave.
 // Each slider just writes a CSS variable on the banner, so changes are instant
 // and you can read off the final values to bake in.
 // ---------------------------------------------------------------------------
 const TUNER_CONTROLS = [
-  { var: "--wave-dur", label: "Speed (cycle)", min: 4, max: 40, step: 0.5, unit: "s", value: 15 },
-  { var: "--glow-strength", label: "Brightness", min: 0, max: 1, step: 0.01, unit: "", value: 0.85 },
-  { var: "--band-1", label: "Band 1 width", min: 300, max: 2400, step: 20, unit: "px", value: 1100 },
-  { var: "--band-2", label: "Band 2 width", min: 300, max: 2400, step: 20, unit: "px", value: 720 }
+  { var: "--wave-dur", label: "Speed (cycle)", min: 2, max: 30, step: 0.5, unit: "s", value: 8 },
+  { var: "--glow-strength", label: "Brightness", min: 0, max: 1, step: 0.01, unit: "", value: 0.42 },
+  { var: "--band-1", label: "Band 1 width", min: 300, max: 2400, step: 20, unit: "px", value: 920 },
+  { var: "--band-2", label: "Band 2 width", min: 300, max: 2400, step: 20, unit: "px", value: 590 },
+  { var: "--band-3", label: "Band 3 width", min: 300, max: 2400, step: 20, unit: "px", value: 1330 }
 ];
 
 function mountTuner(banner) {

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rose Lab — Eva's Space</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="./css/style.css">
+<style>
+  body { margin: 0; background: #fbf3e6; color: #2a211b; font: 16px/1.6 -apple-system, system-ui, sans-serif; }
+  .lab { max-width: 1100px; margin: 0 auto; padding: 48px 24px 96px; }
+  .lab h1 { font-size: 2.4rem; margin: 0 0 8px; }
+  .lab h2 { font-size: 1.4rem; margin: 48px 0 12px; border-top: 1px solid rgba(0,0,0,.12); padding-top: 24px; }
+  .lab p, .lab li { max-width: 70ch; }
+  .lab code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+  .muted { color: #6b5d50; }
+  /* Static cross-stitch artwork — clean cream stage for screenshotting. */
+  .stage { background: #fbf3e6; border: 1px solid rgba(0,0,0,.1); border-radius: 14px; overflow: hidden; margin: 16px 0; }
+  .stage svg { display: block; width: 100%; height: auto; }
+  .closeups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .closeups .stage { margin: 0; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; list-style: none; }
+  .swatches li { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
+  .chip { width: 22px; height: 22px; border-radius: 5px; border: 1px solid rgba(0,0,0,.15); }
+  /* Neutralise the site's banner animation here — we want a static image. */
+  .stage .xmark { opacity: 1; }
+  @media (max-width: 720px) { .closeups { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <main class="lab">
+    <h1>Rose Lab</h1>
+    <p class="muted">A static render of the cross-stitch roses used on Eva's Space, plus a written description of how the artwork is generated. Screenshot the images below and send them to an image model together with the description, to get a better rose design back.</p>
+
+    <h2>1 · The full banner (current output)</h2>
+    <div class="stage">
+      <svg id="banner" viewBox="0 0 1600 500" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Cross-stitch rose banner">
+        <g class="xmark-layer"></g>
+      </svg>
+    </div>
+
+    <h2>2 · Single roses, close up</h2>
+    <div class="closeups">
+      <div class="stage"><svg id="rose-a" viewBox="0 0 600 600" role="img" aria-label="Rose close-up A"></svg></div>
+      <div class="stage"><svg id="rose-b" viewBox="0 0 600 600" role="img" aria-label="Rose close-up B"></svg></div>
+      <div class="stage"><svg id="rose-c" viewBox="0 0 600 600" role="img" aria-label="Rose close-up C"></svg></div>
+    </div>
+
+    <h2>3 · How an X-grid becomes a rose</h2>
+    <p><strong>Medium.</strong> The image imitates counted cross-stitch embroidery. Every "pixel" is a small <strong>X</strong> — two crossing diagonal stitches — placed on a fixed square grid (10&nbsp;px spacing, each X about 8&nbsp;px). Nothing is anti-aliased or blended; colour only changes from one whole stitch to the next, so the rose is built entirely out of discrete coloured crosses on a transparent / cream background.</p>
+
+    <p><strong>Geometry of one rose.</strong> A rose occupies an ellipse. For each grid cell inside it we take polar coordinates — radius <code>r</code> (0 at the centre, 1 at the rim) and angle <code>θ</code> — and decide the stitch colour like this:</p>
+    <ul>
+      <li><strong>Silhouette.</strong> The outline is a soft 5-lobe scallop (<code>edge = 0.86 + 0.14·cos(5θ)</code>), so the flower reads as five rounded petals rather than a circle.</li>
+      <li><strong>Petal rings.</strong> The radius is split into <strong>3 concentric layers</strong>. Each layer is rotated by half a petal relative to the one inside it, so petals <em>interleave</em> like a real rose instead of lining up into spokes.</li>
+      <li><strong>Shading.</strong> Within each ring the colour runs <em>dark at the petal base → light at the petal tip</em>, and the angular creases between petals are darkened further. Overall the bloom goes from a deep, shadowed heart to bright, light-catching outer petals.</li>
+      <li><strong>Heart.</strong> The innermost core is a tight dark spiral swirl — the rolled centre of the bud.</li>
+    </ul>
+    <p>The palette is a 5-step ramp from darkest to lightest, chosen per rose so some are deep red and some are blush-pink. Leaves and the connecting vine use greens.</p>
+
+    <h2>4 · Palette</h2>
+    <ul class="swatches">
+      <li><span class="chip" style="background:#6f0d1e"></span> burgundy #6f0d1e</li>
+      <li><span class="chip" style="background:#9a1624"></span> dark #9a1624</li>
+      <li><span class="chip" style="background:#d51d2c"></span> red #d51d2c</li>
+      <li><span class="chip" style="background:#ef5d51"></span> coral #ef5d51</li>
+      <li><span class="chip" style="background:#ff8f89"></span> pink #ff8f89</li>
+      <li><span class="chip" style="background:#ffc1b6"></span> blush #ffc1b6</li>
+      <li><span class="chip" style="background:#ffe3d9"></span> light #ffe3d9</li>
+      <li><span class="chip" style="background:#1f4925"></span> leaf-dark #1f4925</li>
+      <li><span class="chip" style="background:#3e6f2a"></span> leaf-green #3e6f2a</li>
+      <li><span class="chip" style="background:#7d8c2c"></span> leaf-olive #7d8c2c</li>
+      <li><span class="chip" style="background:#a8ba66"></span> leaf-sage #a8ba66</li>
+    </ul>
+
+    <h2>5 · What we want improved</h2>
+    <p>Keep the <strong>counted cross-stitch style</strong> — discrete coloured X stitches on a square grid, cream/transparent background, the warm rose-and-green palette above. But make the roses <strong>read more convincingly as roses</strong>: clearer layered, overlapping petals; a believable spiral bud at the centre; natural highlights and shadows so the bloom looks three-dimensional; clean petal edges rather than a mottled blob. The result should still be expressible as a grid of coloured crosses (so it can be re-encoded back into this stitch renderer).</p>
+  </main>
+
+  <script type="module">
+    import { renderRoseBanner, renderRoseCloseup } from "./js/rose-banner.js";
+    renderRoseBanner(document);
+    renderRoseCloseup(document.getElementById("rose-a"), ["rose-burgundy","rose-dark","rose-red","rose-coral","rose-blush"], 0.05);
+    renderRoseCloseup(document.getElementById("rose-b"), ["rose-dark","rose-red","rose-pink","rose-blush","rose-light"], -0.12);
+    renderRoseCloseup(document.getElementById("rose-c"), ["rose-red","rose-coral","rose-pink","rose-blush","rose-light"], 0.0);
+  </script>
+</body>
+</html>
