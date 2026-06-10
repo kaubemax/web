@@ -403,15 +403,13 @@ svg {
    little hand-stitched texture. The bloom comes from the light sweep above. */
 .xmark {
   color: var(--x-color);
-}
-
-.xmark line {
+  fill: none;
   stroke: currentColor;
   stroke-width: 2.1;
   stroke-linecap: round;
 }
 
-.xmark.small line {
+.xmark.small {
   stroke-width: 1.8;
 }
 

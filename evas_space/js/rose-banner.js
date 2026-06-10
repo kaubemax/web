@@ -4,7 +4,6 @@
 // costs one animated element no matter how many crosses there are. Generated as
 // SVG so it stays sharp at any size.
 
-const svgNS = "http://www.w3.org/2000/svg";
 const W = 1600;
 const H = 500;
 const STEP = 7;    // grid spacing — finer = more petal detail (cheap now: crosses are static)
@@ -154,37 +153,25 @@ function buildArtwork() {
   return [...unique.values()];
 }
 
-function createXMark({ x, y, cls, small }) {
-  const group = document.createElementNS(svgNS, "g");
-  group.setAttribute("class", `xmark ${cls}${small ? " small" : ""}`);
-  group.setAttribute("transform", `translate(${x} ${y})`);
+// Each cross is one <path> (two diagonal sub-strokes) rather than a <g> with
+// two <line>s — a third of the SVG nodes, which matters a lot on mobile with
+// ~4k crosses. Built as one innerHTML string so the browser parses it in a
+// single pass instead of thousands of createElementNS calls.
+const CROSS_D = `M0 0L${X_SIZE} ${X_SIZE}M${X_SIZE} 0L0 ${X_SIZE}`;
 
-  const lineA = document.createElementNS(svgNS, "line");
-  lineA.setAttribute("x1", "0");
-  lineA.setAttribute("y1", "0");
-  lineA.setAttribute("x2", String(X_SIZE));
-  lineA.setAttribute("y2", String(X_SIZE));
-
-  const lineB = document.createElementNS(svgNS, "line");
-  lineB.setAttribute("x1", String(X_SIZE));
-  lineB.setAttribute("y1", "0");
-  lineB.setAttribute("x2", "0");
-  lineB.setAttribute("y2", String(X_SIZE));
-
-  group.append(lineA, lineB);
-  // A touch of static opacity variation reads as hand-stitched thread; it costs
-  // nothing because nothing here animates.
-  group.style.opacity = (0.82 + Math.random() * 0.18).toFixed(2);
-  return group;
+function marksToSvg(marks, texture = true) {
+  return marks.map(({ x, y, cls, small }) => {
+    // A touch of static opacity variation reads as hand-stitched thread.
+    const style = texture ? ` style="opacity:${(0.82 + Math.random() * 0.18).toFixed(2)}"` : "";
+    return `<path class="xmark ${cls}${small ? " small" : ""}" transform="translate(${x} ${y})"${style} d="${CROSS_D}"/>`;
+  }).join("");
 }
 
 export function renderRoseBanner(root = document) {
   const layer = root.querySelector(".xmark-layer");
   if (!layer) return;
 
-  const fragment = document.createDocumentFragment();
-  buildArtwork().forEach(mark => fragment.appendChild(createXMark(mark)));
-  layer.replaceChildren(fragment);
+  layer.innerHTML = marksToSvg(buildArtwork());
 
   if (new URLSearchParams(location.search).has("tune")) {
     mountTuner(root.querySelector(".rose-x-banner"));
@@ -192,7 +179,8 @@ export function renderRoseBanner(root = document) {
 }
 
 // Render a single large rose into an SVG (viewBox "0 0 600 600"). Used by the
-// rose lab page to show the bloom shape in isolation.
+// rose lab page to show the bloom shape in isolation (no opacity texture, so
+// it stays a clean reference image).
 export function renderRoseCloseup(svg, palette, angle = 0, rx = 250, ry = 230) {
   if (!svg) return;
   const marks = [];
@@ -202,9 +190,7 @@ export function renderRoseCloseup(svg, palette, angle = 0, rx = 250, ry = 230) {
     const key = `${mark.x},${mark.y}`;
     if (!unique.has(key)) unique.set(key, mark);
   });
-  const fragment = document.createDocumentFragment();
-  [...unique.values()].forEach(mark => fragment.appendChild(createXMark(mark)));
-  svg.replaceChildren(fragment);
+  svg.innerHTML = marksToSvg([...unique.values()], false);
 }
 
 // ---------------------------------------------------------------------------
