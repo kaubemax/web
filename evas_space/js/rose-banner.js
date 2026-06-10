@@ -1,11 +1,12 @@
 // Digital cross-rose banner: roses, buds, leaves and a vine drawn as a grid of
-// crisp X marks, then animated with a position-based glimmer wave plus a few
-// sparkle "winks". Generated as SVG so it stays sharp at any size.
+// crisp X marks. A position-based delay makes a brightness wave roll across the
+// crosses (see .xmark in style.css). Generated as SVG so it stays sharp at any
+// size.
 
 const svgNS = "http://www.w3.org/2000/svg";
 const W = 1600;
 const H = 500;
-const STEP = 12;
+const STEP = 10;
 const X_SIZE = 8;
 const waveDuration = 8;
 
@@ -28,34 +29,48 @@ function addMark(marks, x, y, cls, small = false) {
 function addRose(marks, cx, cy, rx, ry, palette, angle = 0) {
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);
+  const last = palette.length - 1;  // palette runs dark[0] -> light[last]
+  const RINGS = 4;                  // concentric petal layers
+  const PETALS = 5;                 // petals around each layer
 
   for (let x = -rx; x <= rx; x += STEP) {
     for (let y = -ry; y <= ry; y += STEP) {
       const nx = x / rx;
       const ny = y / ry;
-      const d = nx * nx + ny * ny;
-      if (d > 1) continue;
+      const r = Math.hypot(nx, ny);
+      if (r > 1) continue;
 
       const theta = Math.atan2(ny, nx);
-      const petalWave = Math.sin(theta * 4.2 + Math.sqrt(d) * 9.4);
-      const spiral = Math.abs(Math.sin(theta * 2.4 + Math.sqrt(d) * 13));
-      if (d > 0.76 && petalWave < -0.42) continue;
-      if (d < 0.18 && spiral < 0.28) continue;
+      const ringPos = r * RINGS;
+      const ring = Math.min(RINGS - 1, Math.floor(ringPos));
+      const ringFrac = ringPos - ring;                   // 0 petal base .. 1 tip
+
+      // Each layer is rotated half a petal from the last, so petals interleave
+      // like a real rose rather than lining up into spokes.
+      const rot = ring * (Math.PI / PETALS);
+      const scallop = Math.cos((theta + rot) * PETALS);  // +1 face .. -1 crease
+
+      // Scalloped flower silhouette, aligned to the outermost layer.
+      const outerRot = (RINGS - 1) * (Math.PI / PETALS);
+      const edge = 0.88 + 0.12 * Math.cos((theta + outerRot) * PETALS);
+      if (r > edge) continue;
+
+      let idx;
+      if (r < 0.2) {
+        // Rolled bud swirl at the heart.
+        idx = Math.sin(theta * 2 + r * 20) < -0.25 ? 1 : 0;
+      } else {
+        // Rolled petals: each layer runs dark at its base to light at its tip,
+        // and the creases between petals are deepened for separation.
+        const face = (scallop + 1) / 2;
+        let tone = 0.04 + 0.34 * r + 0.32 * ringFrac + 0.26 * face;
+        if (scallop < -0.55) tone -= 0.26;
+        idx = Math.min(last, Math.max(0, Math.floor(tone * palette.length)));
+      }
 
       const xr = x * cos - y * sin;
       const yr = x * sin + y * cos;
-      let cls;
-
-      if (d < 0.13 || spiral < 0.18) cls = palette[0];
-      else if (petalWave > 0.58 || (nx > 0.18 && ny > -0.25 && d < 0.7)) cls = palette[1];
-      else if (d > 0.72 || petalWave < -0.05) cls = palette[3];
-      else cls = palette[2];
-
-      if (ny < -0.45 && nx < -0.18) cls = palette[4];
-      if (nx > 0.36 && ny < -0.18 && d < 0.82) cls = palette[4];
-      if (nx < -0.52 && ny > 0.1) cls = palette[1];
-
-      addMark(marks, cx + xr, cy + yr, `${cls} flower`);
+      addMark(marks, cx + xr, cy + yr, `${palette[idx]} flower`);
     }
   }
 }
