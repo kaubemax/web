@@ -8,14 +8,28 @@ const W = 1600;
 const H = 500;
 const STEP = 10;
 const X_SIZE = 8;
-const waveDuration = 8;
+const BASE_DUR = 13;   // base seconds for one dim -> bloom -> dim cycle
 
-function setWaveDelay(el, x, y) {
-  const normalizedX = x / W;
-  const verticalVariation = Math.sin(y * 0.036) * 0.52;
-  const organicOffset = Math.sin((x + y) * 0.019) * 0.24;
-  const delay = normalizedX * waveDuration + verticalVariation + organicOffset;
+// Give every cross its own timing so the bloom reads as an organic, travelling
+// wave rather than a synchronised pulse:
+//  - --delay is negative, so each cross is already mid-cycle at load (no
+//    start-up sweep); the value tracks x so the bloom drifts across the width
+//    and wraps seamlessly.
+//  - --dur is detuned a little per cross, so the wave slowly dissolves into a
+//    shimmer instead of marching back and forth on a fixed beat.
+//  - --lo (the dim floor) varies, so some crosses barely react while others
+//    swing fully — no two react quite the same.
+function setTiming(el, x, y) {
+  const dur = BASE_DUR * (0.9 + Math.random() * 0.2);
+  const phase = 0.1                            // keep every delay negative
+    + x / W                                     // travelling wave across the width
+    + Math.sin(y * 0.05) * 0.05                 // soft vertical drift
+    + (Math.random() - 0.5) * 0.12;             // organic jitter
+  const delay = -phase * dur;                   // negative -> already running
+  const lo = 0.5 + Math.random() * 0.24;        // varied dim floor per cross
+  el.style.setProperty("--dur", `${dur.toFixed(2)}s`);
   el.style.setProperty("--delay", `${delay.toFixed(2)}s`);
+  el.style.setProperty("--lo", lo.toFixed(2));
 }
 
 function snap(value) {
@@ -172,7 +186,7 @@ function createXMark({ x, y, cls, small }) {
   lineB.setAttribute("y2", String(X_SIZE));
 
   group.append(lineA, lineB);
-  setWaveDelay(group, x, y);
+  setTiming(group, x, y);
   return group;
 }
 

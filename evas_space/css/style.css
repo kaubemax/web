@@ -358,9 +358,8 @@ svg {
 
 .xmark {
   color: var(--x-color);
-  opacity: .92;
-  animation: xmark-glow 8s ease-in-out infinite;
-  animation-delay: var(--delay, 0s);
+  opacity: var(--lo, .6);
+  animation: xmark-glow var(--dur, 13s) ease-in-out var(--delay, 0s) infinite;
 }
 
 .xmark line {
@@ -382,25 +381,26 @@ svg {
   --glow-color: rgba(185, 218, 148, .38);
 }
 
-.rose-burgundy { --x-color: #6f0d1e; }
-.rose-dark { --x-color: #9a1624; }
-.rose-red { --x-color: #d51d2c; }
-.rose-coral { --x-color: #ef5d51; }
-.rose-pink { --x-color: #ff8f89; }
-.rose-blush { --x-color: #ffc1b6; }
-.rose-light { --x-color: #ffe3d9; }
-.leaf-dark { --x-color: #1f4925; }
-.leaf-green { --x-color: #3e6f2a; }
-.leaf-olive { --x-color: #7d8c2c; }
-.leaf-sage { --x-color: #a8ba66; }
+.rose-burgundy { --x-color: #6f0d1e; --x-bloom: #c33049; }
+.rose-dark { --x-color: #9a1624; --x-bloom: #e23a48; }
+.rose-red { --x-color: #d51d2c; --x-bloom: #ff5a64; }
+.rose-coral { --x-color: #ef5d51; --x-bloom: #ff9384; }
+.rose-pink { --x-color: #ff8f89; --x-bloom: #ffc2b9; }
+.rose-blush { --x-color: #ffc1b6; --x-bloom: #ffe6db; }
+.rose-light { --x-color: #ffe3d9; --x-bloom: #fff6f0; }
+.leaf-dark { --x-color: #1f4925; --x-bloom: #3c8048; }
+.leaf-green { --x-color: #3e6f2a; --x-bloom: #6fae48; }
+.leaf-olive { --x-color: #7d8c2c; --x-bloom: #b0c84e; }
+.leaf-sage { --x-color: #a8ba66; --x-bloom: #d6e692; }
 
-/* A simple brightness wave rolls through the roses: each cross fades dim then
-   bright. The per-mark --delay (spread across the width) makes the wave wander
-   across the artwork. Animating opacity (not filter) keeps it smooth and works
-   reliably in Safari, where animating CSS filters on SVG elements does not. */
+/* A slow bloom wave drifts through the roses: each cross eases from its dim
+   resting colour up to a brighter "bloom" tint and back. Per-cross --delay,
+   --dur and --lo (set in rose-banner.js) spread it into a continuous, organic
+   wave. Animating colour (via currentColor) + opacity — not CSS filters —
+   keeps it smooth and works reliably in Safari. */
 @keyframes xmark-glow {
-  0%, 100% { opacity: .42; }
-  50%      { opacity: 1; }
+  0%, 100% { color: var(--x-color); opacity: var(--lo, .6); }
+  50%      { color: var(--x-bloom, var(--x-color)); opacity: 1; }
 }
 
 .section {
