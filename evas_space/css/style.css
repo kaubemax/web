@@ -329,6 +329,14 @@ svg {
 }
 
 .rose-x-banner {
+  /* Tunable bloom-wave knobs (live-editable via the ?tune panel). */
+  --wave-dur: 15s;          /* time for the light to sweep one full cycle */
+  --glow-strength: .85;     /* overall brightness of the sweep (0–1) */
+  --band-1: 1100px;         /* spacing of the main light band */
+  --band-2: 720px;          /* spacing of the counter band (organic interference) */
+  --glow-1: rgba(255, 244, 235, .9);
+  --glow-2: rgba(255, 232, 224, .7);
+
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -336,11 +344,43 @@ svg {
   border-radius: 0;
   opacity: .96;
   pointer-events: none;
+  isolation: isolate;       /* confine the screen-blend to the banner */
   background:
     radial-gradient(circle at 50% 44%, rgba(255, 204, 202, .34), transparent 40%),
     radial-gradient(circle at 14% 74%, rgba(255, 228, 188, .36), transparent 32%),
     radial-gradient(circle at 86% 24%, rgba(255, 225, 219, .32), transparent 30%),
     linear-gradient(180deg, rgba(255, 248, 237, .42) 0%, rgba(248, 239, 223, .26) 100%);
+}
+
+/* A single GPU-composited light sweep instead of animating every cross. Two
+   soft bands at different spacings drift in opposite directions; `screen`
+   blending brightens the colour of whatever sits under them — strongest on the
+   darker rose crosses — so the bloom reads as a continuous, organic wave. Only
+   this one element animates, so the banner stays cheap no matter how many
+   crosses there are. */
+.rose-x-banner__glow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: var(--glow-strength, .85);
+  /* One soft band per tile; background-size sets the tile to the band width so
+     repeats are seamless and a one-band shift loops perfectly. */
+  background-image:
+    linear-gradient(to right, transparent 0%, var(--glow-1) 50%, transparent 100%),
+    linear-gradient(to right, transparent 0%, var(--glow-2) 50%, transparent 100%);
+  background-size: var(--band-1) 100%, var(--band-2) 100%;
+  background-repeat: repeat;
+  animation: bloom-sweep var(--wave-dur, 15s) linear infinite;
+}
+
+/* Each layer translates by exactly one of its own band widths per cycle, so
+   both loop seamlessly; opposite directions keep it from looking like a
+   marching pattern. */
+@keyframes bloom-sweep {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: var(--band-1) 0, calc(var(--band-2) * -1) 0; }
 }
 
 .rose-x-banner__svg {
@@ -356,10 +396,10 @@ svg {
   fill: transparent;
 }
 
+/* The crosses are static; opacity (set per cross in rose-banner.js) just adds a
+   little hand-stitched texture. The bloom comes from the light sweep above. */
 .xmark {
   color: var(--x-color);
-  opacity: var(--lo, .6);
-  animation: xmark-glow var(--dur, 13s) ease-in-out var(--delay, 0s) infinite;
 }
 
 .xmark line {
@@ -372,36 +412,17 @@ svg {
   stroke-width: 2.2;
 }
 
-.flower {
-  --glow-color: rgba(255, 176, 193, .58);
-}
-
-.leaf,
-.stem {
-  --glow-color: rgba(185, 218, 148, .38);
-}
-
-.rose-burgundy { --x-color: #6f0d1e; --x-bloom: #c33049; }
-.rose-dark { --x-color: #9a1624; --x-bloom: #e23a48; }
-.rose-red { --x-color: #d51d2c; --x-bloom: #ff5a64; }
-.rose-coral { --x-color: #ef5d51; --x-bloom: #ff9384; }
-.rose-pink { --x-color: #ff8f89; --x-bloom: #ffc2b9; }
-.rose-blush { --x-color: #ffc1b6; --x-bloom: #ffe6db; }
-.rose-light { --x-color: #ffe3d9; --x-bloom: #fff6f0; }
-.leaf-dark { --x-color: #1f4925; --x-bloom: #3c8048; }
-.leaf-green { --x-color: #3e6f2a; --x-bloom: #6fae48; }
-.leaf-olive { --x-color: #7d8c2c; --x-bloom: #b0c84e; }
-.leaf-sage { --x-color: #a8ba66; --x-bloom: #d6e692; }
-
-/* A slow bloom wave drifts through the roses: each cross eases from its dim
-   resting colour up to a brighter "bloom" tint and back. Per-cross --delay,
-   --dur and --lo (set in rose-banner.js) spread it into a continuous, organic
-   wave. Animating colour (via currentColor) + opacity — not CSS filters —
-   keeps it smooth and works reliably in Safari. */
-@keyframes xmark-glow {
-  0%, 100% { color: var(--x-color); opacity: var(--lo, .6); }
-  50%      { color: var(--x-bloom, var(--x-color)); opacity: 1; }
-}
+.rose-burgundy { --x-color: #6f0d1e; }
+.rose-dark { --x-color: #9a1624; }
+.rose-red { --x-color: #d51d2c; }
+.rose-coral { --x-color: #ef5d51; }
+.rose-pink { --x-color: #ff8f89; }
+.rose-blush { --x-color: #ffc1b6; }
+.rose-light { --x-color: #ffe3d9; }
+.leaf-dark { --x-color: #1f4925; }
+.leaf-green { --x-color: #3e6f2a; }
+.leaf-olive { --x-color: #7d8c2c; }
+.leaf-sage { --x-color: #a8ba66; }
 
 .section {
   padding: clamp(54px, 8vw, 110px) 0;
@@ -1665,8 +1686,8 @@ svg {
     transition-duration: .001ms !important;
   }
 
-  .xmark {
-    opacity: .86;
+  .rose-x-banner__glow {
+    display: none;   /* no light sweep when motion is reduced */
   }
 }
 
