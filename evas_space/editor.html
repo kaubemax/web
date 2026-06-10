@@ -352,7 +352,7 @@
   </datalist>
 
   <script type="module">
-    import { archiveTypes, deleteEntry, entryStats, esc, formatDate, getEspressoDefaults, getUser, loadEntries, loadViewPrefs, loadVisitsByDay, loadVisitStats, normalizeIngredients, normalizeSteps, normalizeTags, onAuthChange, saveEspressoDefaults, saveViewPrefs, seedDemoData, signIn, signOut, slugify, supabaseEnabled, uploadMedia, upsertEntry, wipeAllEntries } from "./js/client.js";
+    import { archiveTypes, deleteEntry, entryStats, esc, formatDate, getEspressoDefaults, loadEntries, loadViewPrefs, loadVisitsByDay, loadVisitStats, normalizeIngredients, normalizeSteps, normalizeTags, onAuthChange, saveEspressoDefaults, saveViewPrefs, seedDemoData, signIn, signOut, slugify, supabaseEnabled, uploadMedia, upsertEntry, wipeAllEntries } from "./js/client.js";
 
     const $ = id => document.getElementById(id);
     let currentPhoto = "";
@@ -860,24 +860,21 @@
     if (!supabaseEnabled) {
       await showStudio();
     } else {
-      // Initial state. getSession() here is local and runs OUTSIDE the
-      // onAuthStateChange callback, so it's safe to query Supabase after it.
-      const initialUser = await getUser();
-      if (initialUser) {
-        await showStudio();
-      } else {
-        showGate();
-      }
+      // Default to the gate; the auth event decides the rest.
+      showGate();
 
-      // React to later sign in / sign out. IMPORTANT: never call Supabase
-      // queries directly inside the onAuthStateChange callback — it holds the
-      // auth lock and deadlocks (this left the studio empty after navigating
-      // away and back, on the restored-session INITIAL_SESSION event). Defer
-      // the work out of the callback, and ignore duplicate/no-op fires.
-      let lastUid = initialUser?.id ?? null;
+      // Supabase fires onAuthStateChange with INITIAL_SESSION on load (incl.
+      // restored sessions), then on sign in / out. CRITICAL: never run a
+      // Supabase query directly inside this callback — it holds the auth lock
+      // and deadlocks (which left the studio empty + sign-out dead after
+      // navigating away and back). Always defer the work to a fresh macrotask
+      // so the lock is released first. Ignore duplicate/no-op fires.
+      let lastUid = null;
+      let settled = false;
       onAuthChange(user => {
         const uid = user?.id ?? null;
-        if (uid === lastUid) return;
+        if (settled && uid === lastUid) return;
+        settled = true;
         lastUid = uid;
         setTimeout(() => {
           if (uid) showStudio();
