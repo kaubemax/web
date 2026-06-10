@@ -7,8 +7,8 @@
 const svgNS = "http://www.w3.org/2000/svg";
 const W = 1600;
 const H = 500;
-const STEP = 10;
-const X_SIZE = 8;
+const STEP = 7;    // grid spacing — finer = more petal detail (cheap now: crosses are static)
+const X_SIZE = 6;  // arm length of each X
 
 function snap(value) {
   return Math.round(value / STEP) * STEP;
@@ -22,8 +22,10 @@ function addRose(marks, cx, cy, rx, ry, palette, angle = 0) {
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);
   const last = palette.length - 1;  // palette runs dark[0] -> light[last]
-  const RINGS = 3;                  // concentric petal layers (fewer = bolder petals)
-  const PETALS = 5;                 // petals around each layer
+  const PETALS = 5;                  // petals around each layer
+  // More concentric petal layers on bigger blooms; fewer on small ones so they
+  // stay clean. With the finer grid this is what makes the rose read as rolled.
+  const RINGS = Math.max(3, Math.min(6, Math.round(Math.max(rx, ry) / 30)));
 
   for (let x = -rx; x <= rx; x += STEP) {
     for (let y = -ry; y <= ry; y += STEP) {
@@ -48,16 +50,18 @@ function addRose(marks, cx, cy, rx, ry, palette, angle = 0) {
       if (r > edge) continue;
 
       let idx;
-      if (r < 0.2) {
+      if (r < 0.16) {
         // Rolled bud swirl at the heart.
-        idx = Math.sin(theta * 2 + r * 20) < -0.25 ? 1 : 0;
+        idx = Math.sin(theta * 2 + r * 22) < -0.2 ? 1 : 0;
       } else {
         // Rolled petals: each layer runs dark at its base to light at its tip
-        // (heavy ringFrac weight = bold concentric petals), with the creases
-        // between petals deepened for clean separation.
+        // (heavy ringFrac weight = bold concentric petals). Two shadow lines —
+        // the angular crease between petals and the seam between layers — keep
+        // the petals reading as distinct, overlapping shapes.
         const face = (scallop + 1) / 2;
-        let tone = 0.02 + 0.3 * r + 0.5 * ringFrac + 0.22 * face;
-        if (scallop < -0.6) tone -= 0.22;
+        let tone = 0.28 * r + 0.5 * ringFrac + 0.2 * face;
+        if (scallop < -0.55) tone -= 0.22;   // crease between adjacent petals
+        if (ringFrac < 0.16) tone -= 0.18;    // seam where the next layer overlaps
         idx = Math.min(last, Math.max(0, Math.floor(tone * palette.length)));
       }
 
@@ -117,16 +121,19 @@ function buildArtwork() {
   addStem(marks, [[1110, 300], [1195, 235], [1305, 275], [1380, 175]]);
   addStem(marks, [[1450, 280], [1535, 190]]);
 
-  // Roses and buds.
+  // Roses and buds. The big blooms use the deep-red "left rose" ramp (burgundy
+  // heart -> light petal tips); a couple lean pinker for variation.
+  const deepRose = ["rose-burgundy", "rose-dark", "rose-red", "rose-coral", "rose-blush", "rose-light"];
+  const pinkRose = ["rose-dark", "rose-red", "rose-coral", "rose-pink", "rose-blush", "rose-light"];
   addBud(marks, 63, 153, -0.45);
-  addRose(marks, 282, 178, 126, 88, ["rose-dark", "rose-red", "rose-pink", "rose-blush", "rose-light"], -0.12);
-  addRose(marks, 174, 346, 116, 82, ["rose-burgundy", "rose-dark", "rose-red", "rose-coral", "rose-blush"], 0.16);
+  addRose(marks, 282, 178, 126, 88, pinkRose, -0.12);
+  addRose(marks, 174, 346, 116, 82, deepRose, 0.16);
   addRose(marks, 589, 370, 78, 62, ["rose-red", "rose-coral", "rose-pink", "rose-blush", "rose-light"], -0.05);
   addBud(marks, 585, 175, 0.05);
-  addRose(marks, 800, 252, 152, 105, ["rose-burgundy", "rose-dark", "rose-red", "rose-coral", "rose-blush"], 0.03);
+  addRose(marks, 800, 252, 152, 105, deepRose, 0.03);
   addBud(marks, 960, 317, 0.22);
-  addRose(marks, 1145, 344, 96, 76, ["rose-dark", "rose-red", "rose-coral", "rose-pink", "rose-light"], -0.08);
-  addRose(marks, 1340, 185, 132, 92, ["rose-burgundy", "rose-dark", "rose-red", "rose-coral", "rose-blush"], 0.1);
+  addRose(marks, 1145, 344, 96, 76, pinkRose, -0.08);
+  addRose(marks, 1340, 185, 132, 92, deepRose, 0.1);
   addBud(marks, 1532, 168, 0.55);
 
   // Leaves as a flowing modern vine.

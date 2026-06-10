@@ -407,12 +407,12 @@ svg {
 
 .xmark line {
   stroke: currentColor;
-  stroke-width: 2.65;
+  stroke-width: 2.1;
   stroke-linecap: round;
 }
 
 .xmark.small line {
-  stroke-width: 2.2;
+  stroke-width: 1.8;
 }
 
 .rose-burgundy { --x-color: #6f0d1e; }
