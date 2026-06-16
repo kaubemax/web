@@ -27,7 +27,7 @@ function roseSprig() {
   const marks = crosses
     .map(([x, y]) => `<path d="M${x - 3} ${y - 3}L${x + 3} ${y + 3}M${x + 3} ${y - 3}L${x - 3} ${y + 3}"/>`)
     .join("");
-  return `<svg width="60" height="40" viewBox="0 0 60 40" fill="none"
+  return `<svg class="pdf-sprig" width="44" height="29" viewBox="0 0 60 40" fill="none"
             stroke="#b74353" stroke-width="2" stroke-linecap="round"
             aria-hidden="true">${marks}</svg>`;
 }
@@ -59,7 +59,7 @@ function cardMarkup(item) {
   return `
     <div class="pdf-page">
       <header class="pdf-head">
-        <div class="pdf-brand">${roseSprig()}<span>Eva's Space</span></div>
+        <div class="pdf-brand">${roseSprig()}<span class="pdf-brand-name">Eva's Space</span></div>
         <p class="pdf-eyebrow">${esc(formatDate(item.date || item.created_at))}</p>
         <h1 class="pdf-title">${esc(item.title)}</h1>
         ${item.rating ? `<div class="pdf-stars">${starRating(item.rating)}</div>` : ""}
@@ -84,7 +84,7 @@ function cardMarkup(item) {
         <section class="pdf-method">
           <h2>Method</h2>
           <ol>
-            ${steps.map(step => `<li>${esc(step)}</li>`).join("")}
+            ${steps.map(step => `<li><span class="pdf-method-text">${esc(step)}</span></li>`).join("")}
           </ol>
         </section>
       </div>
@@ -105,80 +105,93 @@ const CARD_STYLES = `
     font-family: "Inter", system-ui, sans-serif;
     font-size: 14px; line-height: 1.55;
   }
-  .pdf-page { padding: 48px 52px 40px; }
+  .pdf-card * { box-sizing: border-box; }
+  .pdf-page { padding: 52px 56px 44px; }
   .pdf-head { text-align: center; }
+  /* Flex keeps the sprig glued to the wordmark — html2canvas mis-places
+     inline SVG, so a flex row is the reliable way to centre the masthead. */
   .pdf-brand {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    font-family: "Instrument Serif", Georgia, serif; font-size: 20px;
-    letter-spacing: .02em; color: #7c2835;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    font-family: "Instrument Serif", Georgia, serif; font-size: 21px;
+    letter-spacing: .03em; color: #7c2835; line-height: 1;
   }
+  .pdf-sprig { display: block; }
   .pdf-eyebrow {
-    margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .22em;
+    margin: 22px 0 8px; text-transform: uppercase; letter-spacing: .24em;
     font-size: 11px; color: #b74353; font-weight: 600;
   }
   .pdf-title {
-    margin: 0; font-family: "Instrument Serif", Georgia, serif;
-    font-weight: 400; font-size: 46px; line-height: 1.05; color: #201d1b;
+    margin: 0 auto; max-width: 92%;
+    font-family: "Instrument Serif", Georgia, serif;
+    font-weight: 400; font-size: 47px; line-height: 1.08; color: #201d1b;
   }
-  .pdf-stars { margin-top: 10px; color: #b74353; font-size: 20px; letter-spacing: 2px; }
+  .pdf-stars { margin-top: 12px; color: #b74353; font-size: 19px; letter-spacing: 3px; }
   .pdf-stars .star { color: #d8c7b4; }
   .pdf-stars .star.on { color: #b74353; }
   .pdf-meta {
-    margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;
-    align-items: center; justify-content: center;
-    font-size: 12.5px; color: #5b5048;
+    margin-top: 14px; font-size: 12.5px; color: #5b5048; line-height: 1;
   }
-  .pdf-meta i { color: #c4a98f; font-style: normal; }
+  .pdf-meta span { vertical-align: middle; }
+  .pdf-meta i {
+    font-style: normal; margin: 0 9px;
+    color: #cdb39c; vertical-align: middle;
+  }
   .pdf-cover {
-    margin: 26px 0 6px; height: 220px; border-radius: 14px; overflow: hidden;
-    border: 1px solid rgba(124,40,53,.18);
+    margin: 30px 0 0; height: 208px; border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(124,40,53,.16);
   }
   .pdf-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .pdf-cover--gradient { display: flex; align-items: center; justify-content: center; }
+  .pdf-cover--gradient { text-align: center; line-height: 208px; }
   .pdf-cover--gradient span {
-    font-family: "Instrument Serif", Georgia, serif; font-size: 96px;
-    color: rgba(255,255,255,.82);
+    font-family: "Instrument Serif", Georgia, serif; font-size: 92px;
+    color: rgba(255,255,255,.85); vertical-align: middle; line-height: 1;
   }
   .pdf-lead {
-    margin: 22px 6px 6px; text-align: center; font-style: italic;
-    font-size: 15px; color: #4a4039;
+    margin: 26px auto 0; max-width: 78%; text-align: center;
+    font-style: italic; font-size: 15px; line-height: 1.5; color: #4a4039;
   }
   .pdf-body {
-    margin-top: 28px; display: flex; gap: 36px; align-items: flex-start;
+    margin-top: 34px; display: flex; gap: 40px; align-items: flex-start;
   }
-  .pdf-ingredients { flex: 0 0 38%; }
+  .pdf-ingredients { flex: 0 0 37%; }
   .pdf-method { flex: 1; }
   .pdf-body h2 {
     font-family: "Instrument Serif", Georgia, serif; font-weight: 400;
-    font-size: 22px; color: #7c2835; margin: 0 0 14px;
-    padding-bottom: 8px; border-bottom: 1px solid rgba(124,40,53,.22);
+    font-size: 23px; color: #7c2835; margin: 0 0 16px;
+    padding-bottom: 9px; border-bottom: 1px solid rgba(124,40,53,.22);
   }
   .pdf-ingredients ul { list-style: none; margin: 0; padding: 0; }
   .pdf-ingredients li {
-    padding: 7px 0; border-bottom: 1px dotted rgba(124,40,53,.2);
+    padding: 8px 0; border-bottom: 1px dotted rgba(124,40,53,.2);
     break-inside: avoid;
   }
+  .pdf-ingredients li:last-child { border-bottom: 0; }
   .pdf-ing-name { display: block; font-weight: 600; }
   .pdf-ing-cat {
-    display: block; font-size: 11px; text-transform: uppercase;
-    letter-spacing: .12em; color: #9a8a7c; margin-top: 2px;
+    display: block; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: .14em; color: #a3917f; margin-top: 3px;
   }
   .pdf-method ol { margin: 0; padding: 0; list-style: none; counter-reset: step; }
   .pdf-method li {
-    position: relative; padding: 0 0 16px 42px; break-inside: avoid;
-    counter-increment: step;
+    display: flex; align-items: flex-start; gap: 14px;
+    padding-bottom: 16px; break-inside: avoid; counter-increment: step;
   }
+  .pdf-method li:last-child { padding-bottom: 0; }
+  /* line-height == height centres the digit reliably in the rasteriser. */
   .pdf-method li::before {
-    content: counter(step); position: absolute; left: 0; top: -2px;
-    width: 28px; height: 28px; border-radius: 50%;
-    background: #b74353; color: #fff; font-weight: 600; font-size: 13px;
-    display: flex; align-items: center; justify-content: center;
+    content: counter(step);
+    flex: 0 0 27px; width: 27px; height: 27px; margin-top: -1px;
+    border-radius: 50%; background: #b74353;
+    color: #fff; font-weight: 600; font-size: 12.5px;
+    text-align: center; line-height: 27px;
   }
+  .pdf-method li > span,
+  .pdf-method-text { display: block; padding-top: 2px; }
   .pdf-foot {
-    margin-top: 30px; padding-top: 16px; border-top: 1px solid rgba(124,40,53,.22);
+    margin-top: 34px; padding-top: 16px; border-top: 1px solid rgba(124,40,53,.2);
     display: flex; justify-content: space-between;
-    font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
-    color: #9a8a7c;
+    font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: #a3917f;
   }`;
 
 // Wait for an <img> inside the node to load (or fail) so html2canvas can paint it.

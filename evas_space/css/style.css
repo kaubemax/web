@@ -190,33 +190,46 @@ svg {
 }
 
 .detail-actions {
-  margin-top: 22px;
+  margin-top: 20px;
 }
 
 .pdf-btn {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  min-height: 44px;
-  padding: 0 20px;
-  border: 1px solid var(--rose-dark);
+  gap: 8px;
+  padding: 9px 15px;
+  border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  color: #fff;
-  background: var(--rose);
-  font-weight: 800;
+  color: var(--soft-ink);
+  background: rgba(255, 250, 241, .55);
+  font-size: .85rem;
+  font-weight: 600;
+  letter-spacing: .01em;
   cursor: pointer;
-  transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.pdf-btn svg {
+  color: var(--rose);
+  transition: transform .2s ease;
 }
 
 .pdf-btn:hover {
-  transform: translateY(-1px);
-  background: var(--rose-dark);
-  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  border-color: rgba(183, 67, 83, .45);
+  background: rgba(255, 250, 241, .9);
+}
+
+.pdf-btn:hover svg {
+  transform: translateY(1px);
 }
 
 .pdf-btn:disabled {
-  opacity: .6;
+  opacity: .55;
   cursor: progress;
+}
+
+.pdf-btn:disabled svg {
   transform: none;
 }
 
