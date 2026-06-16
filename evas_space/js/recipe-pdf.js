@@ -18,18 +18,9 @@ import {
   starRating
 } from "./client.js";
 
-// A small cross-stitch rose sprig (echoes the brand mark) drawn as crosses.
-function roseSprig() {
-  const crosses = [
-    [22, 10], [30, 8], [38, 10], [26, 16], [34, 16], [30, 22],
-    [14, 20], [46, 20], [18, 28], [42, 28], [30, 30]
-  ];
-  const marks = crosses
-    .map(([x, y]) => `<path d="M${x - 3} ${y - 3}L${x + 3} ${y + 3}M${x + 3} ${y - 3}L${x - 3} ${y + 3}"/>`)
-    .join("");
-  return `<svg class="pdf-sprig" width="44" height="29" viewBox="0 0 60 40" fill="none"
-            stroke="#b74353" stroke-width="2" stroke-linecap="round"
-            aria-hidden="true">${marks}</svg>`;
+// Resolve the site favicon relative to wherever the page lives.
+function brandIconUrl() {
+  return new URL("./favicon-96.png", document.baseURI).href;
 }
 
 function coverBlock(item) {
@@ -59,7 +50,10 @@ function cardMarkup(item) {
   return `
     <div class="pdf-page">
       <header class="pdf-head">
-        <div class="pdf-brand">${roseSprig()}<span class="pdf-brand-name">Eva's Space</span></div>
+        <div class="pdf-brand">
+          <img class="pdf-logo" src="${brandIconUrl()}" crossorigin="anonymous" alt="">
+          <span class="pdf-brand-name">Eva's Space</span>
+        </div>
         <p class="pdf-eyebrow">${esc(formatDate(item.date || item.created_at))}</p>
         <h1 class="pdf-title">${esc(item.title)}</h1>
         ${item.rating ? `<div class="pdf-stars">${starRating(item.rating)}</div>` : ""}
@@ -108,14 +102,13 @@ const CARD_STYLES = `
   .pdf-card * { box-sizing: border-box; }
   .pdf-page { padding: 52px 56px 44px; }
   .pdf-head { text-align: center; }
-  /* Flex keeps the sprig glued to the wordmark — html2canvas mis-places
-     inline SVG, so a flex row is the reliable way to centre the masthead. */
+  /* Flex row keeps the logo glued to the wordmark and reliably centred. */
   .pdf-brand {
-    display: flex; align-items: center; justify-content: center; gap: 9px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
     font-family: "Instrument Serif", Georgia, serif; font-size: 21px;
     letter-spacing: .03em; color: #7c2835; line-height: 1;
   }
-  .pdf-sprig { display: block; }
+  .pdf-logo { display: block; width: 30px; height: 30px; }
   .pdf-eyebrow {
     margin: 22px 0 8px; text-transform: uppercase; letter-spacing: .24em;
     font-size: 11px; color: #b74353; font-weight: 600;
@@ -177,16 +170,17 @@ const CARD_STYLES = `
     padding-bottom: 16px; break-inside: avoid; counter-increment: step;
   }
   .pdf-method li:last-child { padding-bottom: 0; }
-  /* line-height == height centres the digit reliably in the rasteriser. */
+  /* html2canvas renders text at the TOP of the line-box (it ignores
+     line-height for vertical centring), so we centre the digit manually:
+     line-height == font-size, then padding-top pushes it to the middle. */
   .pdf-method li::before {
     content: counter(step);
-    flex: 0 0 27px; width: 27px; height: 27px; margin-top: -1px;
+    flex: 0 0 27px; width: 27px; height: 27px; box-sizing: border-box;
     border-radius: 50%; background: #b74353;
-    color: #fff; font-weight: 600; font-size: 12.5px;
-    text-align: center; line-height: 27px;
+    color: #fff; font-weight: 600; font-size: 13px;
+    text-align: center; line-height: 13px; padding-top: 8px;
   }
-  .pdf-method li > span,
-  .pdf-method-text { display: block; padding-top: 2px; }
+  .pdf-method-text { display: block; padding-top: 3px; }
   .pdf-foot {
     margin-top: 34px; padding-top: 16px; border-top: 1px solid rgba(124,40,53,.2);
     display: flex; justify-content: space-between;
@@ -238,27 +232,16 @@ export async function downloadRecipePdf(entry) {
       logging: false
     });
 
-    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const imgH = (canvas.height * pageW) / canvas.width; // full image height in mm
+    // One page sized exactly to the card. A recipe card is a single visual unit,
+    // so a content-height page avoids ugly mid-content cuts and blank trailing
+    // pages — it just scales to fit when printed.
+    const A4_W = 210; // mm
+    const pageW = A4_W;
+    const pageH = Math.max(1, (canvas.height * pageW) / canvas.width);
     const img = canvas.toDataURL("image/jpeg", 0.98);
 
-    if (imgH <= pageH) {
-      pdf.addImage(img, "JPEG", 0, 0, pageW, imgH);
-    } else {
-      // Taller than one page: place the same image shifted up per page so each
-      // A4 sheet shows the next slice (standard html2canvas multi-page trick).
-      let remaining = imgH;
-      let position = 0;
-      while (remaining > 0) {
-        pdf.addImage(img, "JPEG", 0, position, pageW, imgH);
-        remaining -= pageH;
-        position -= pageH;
-        if (remaining > 0) pdf.addPage();
-      }
-    }
-
+    const pdf = new jsPDF({ unit: "mm", format: [pageW, pageH], orientation: "portrait" });
+    pdf.addImage(img, "JPEG", 0, 0, pageW, pageH, undefined, "FAST");
     pdf.save(`${entry.slug || "recipe"}.pdf`);
   } finally {
     card.remove();
