@@ -189,6 +189,37 @@ svg {
   font-weight: 700;
 }
 
+.detail-actions {
+  margin-top: 22px;
+}
+
+.pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--rose-dark);
+  border-radius: var(--r-sm);
+  color: #fff;
+  background: var(--rose);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.pdf-btn:hover {
+  transform: translateY(-1px);
+  background: var(--rose-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+.pdf-btn:disabled {
+  opacity: .6;
+  cursor: progress;
+  transform: none;
+}
+
 .nav-links a {
   padding: 9px 13px;
   border-radius: var(--r-sm);
