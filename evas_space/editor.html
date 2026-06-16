@@ -283,10 +283,6 @@
               <p class="eyebrow">Current entries</p>
               <h2>Your archive</h2>
             </div>
-            <div class="entries-actions">
-              <button class="text-link danger-link" id="wipe-all" type="button" hidden>Wipe all</button>
-              <button class="text-link danger-link" id="clear-local" type="button">Reset demo</button>
-            </div>
           </div>
           <div id="entry-list" class="editor-list"></div>
         </section>
@@ -352,7 +348,7 @@
   </datalist>
 
   <script type="module">
-    import { archiveTypes, deleteEntry, entryStats, esc, formatDate, getEspressoDefaults, loadEntries, loadViewPrefs, loadVisitsByDay, loadVisitStats, normalizeIngredients, normalizeSteps, normalizeTags, onAuthChange, saveEspressoDefaults, saveViewPrefs, seedDemoData, signIn, signOut, slugify, supabaseEnabled, uploadMedia, upsertEntry, wipeAllEntries } from "./js/client.js";
+    import { archiveTypes, deleteEntry, entryStats, esc, formatDate, getEspressoDefaults, loadEntries, loadViewPrefs, loadVisitsByDay, loadVisitStats, normalizeIngredients, normalizeSteps, normalizeTags, onAuthChange, saveEspressoDefaults, saveViewPrefs, signIn, signOut, slugify, supabaseEnabled, uploadMedia, upsertEntry } from "./js/client.js";
 
     const $ = id => document.getElementById(id);
     let currentPhoto = "";
@@ -744,19 +740,6 @@
       renderRecipeStars();
     });
 
-    $("clear-local").addEventListener("click", async () => {
-      const confirmText = supabaseEnabled ? "Add the sample entries to your archive?" : "Reset local demo entries?";
-      if (!confirm(confirmText)) return;
-      try {
-        await seedDemoData();
-        if (!supabaseEnabled) resetForm();
-        await refresh();
-        message(supabaseEnabled ? "Sample entries added." : "Demo data restored.");
-      } catch (error) {
-        message(error.message || "Could not load sample data.", "error");
-      }
-    });
-
     $("visitor-stat").addEventListener("click", openVisits);
     $("visits-close").addEventListener("click", closeVisits);
     $("visits-modal").addEventListener("click", event => {
@@ -764,20 +747,6 @@
     });
     document.addEventListener("keydown", event => {
       if (event.key === "Escape") closeVisits();
-    });
-
-    $("wipe-all").addEventListener("click", async () => {
-      if (!confirm("Delete ALL of your entries? This cannot be undone.")) return;
-      if (!confirm("Really delete everything? Last chance.")) return;
-      try {
-        await wipeAllEntries();
-        resetForm();
-        showForm(false);
-        await refresh();
-        message("All entries deleted.");
-      } catch (error) {
-        message(error.message || "Could not delete entries.", "error");
-      }
     });
 
     ["acidity", "sweetness", "body", "bitterness"].forEach(id => {
@@ -835,8 +804,6 @@
     });
 
     // ----- Boot -----
-    $("clear-local").textContent = supabaseEnabled ? "Load samples" : "Reset demo";
-    $("wipe-all").hidden = !supabaseEnabled;
 
     function showGate() {
       $("auth-gate").hidden = false;

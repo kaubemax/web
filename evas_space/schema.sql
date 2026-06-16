@@ -56,7 +56,7 @@ alter table public.recipes enable row level security;
 drop policy if exists "public read published recipes" on public.recipes;
 create policy "public read published recipes"
   on public.recipes for select
-  using (published = true and owner_id = 'd43430f1-2e23-4b8b-8f94-d27f7061d8ee');
+  using (published = true and owner_id = 'c034125c-81d6-4b25-9a54-717ffd99bbe8');
 drop policy if exists "owner read recipes" on public.recipes;
 create policy "owner read recipes"
   on public.recipes for select to authenticated using (owner_id = auth.uid());
@@ -93,7 +93,7 @@ drop policy if exists "public read published ingredients" on public.recipe_ingre
 create policy "public read published ingredients"
   on public.recipe_ingredients for select using (
     exists (select 1 from public.recipes r where r.id = recipe_ingredients.recipe_id and r.published = true
-            and r.owner_id = 'd43430f1-2e23-4b8b-8f94-d27f7061d8ee'));
+            and r.owner_id = 'c034125c-81d6-4b25-9a54-717ffd99bbe8'));
 drop policy if exists "owner all ingredients" on public.recipe_ingredients;
 create policy "owner all ingredients"
   on public.recipe_ingredients for all to authenticated
@@ -116,7 +116,7 @@ drop policy if exists "public read published steps" on public.recipe_steps;
 create policy "public read published steps"
   on public.recipe_steps for select using (
     exists (select 1 from public.recipes r where r.id = recipe_steps.recipe_id and r.published = true
-            and r.owner_id = 'd43430f1-2e23-4b8b-8f94-d27f7061d8ee'));
+            and r.owner_id = 'c034125c-81d6-4b25-9a54-717ffd99bbe8'));
 drop policy if exists "owner all steps" on public.recipe_steps;
 create policy "owner all steps"
   on public.recipe_steps for all to authenticated
@@ -173,7 +173,7 @@ alter table public.espresso_logs enable row level security;
 drop policy if exists "public read published espresso" on public.espresso_logs;
 create policy "public read published espresso"
   on public.espresso_logs for select
-  using (published = true and owner_id = 'd43430f1-2e23-4b8b-8f94-d27f7061d8ee');
+  using (published = true and owner_id = 'c034125c-81d6-4b25-9a54-717ffd99bbe8');
 drop policy if exists "owner read espresso" on public.espresso_logs;
 create policy "owner read espresso"
   on public.espresso_logs for select to authenticated using (owner_id = auth.uid());
@@ -223,7 +223,7 @@ alter table public.archive_entries enable row level security;
 drop policy if exists "public read published archive" on public.archive_entries;
 create policy "public read published archive"
   on public.archive_entries for select
-  using (published = true and owner_id = 'd43430f1-2e23-4b8b-8f94-d27f7061d8ee');
+  using (published = true and owner_id = 'c034125c-81d6-4b25-9a54-717ffd99bbe8');
 drop policy if exists "owner read archive" on public.archive_entries;
 create policy "owner read archive"
   on public.archive_entries for select to authenticated using (owner_id = auth.uid());
@@ -260,7 +260,7 @@ alter table public.public_settings enable row level security;
 drop policy if exists "public read settings" on public.public_settings;
 create policy "public read settings"
   on public.public_settings for select
-  using (owner_id = 'd43430f1-2e23-4b8b-8f94-d27f7061d8ee');
+  using (owner_id = 'c034125c-81d6-4b25-9a54-717ffd99bbe8');
 drop policy if exists "owner write settings" on public.public_settings;
 create policy "owner write settings"
   on public.public_settings for all to authenticated

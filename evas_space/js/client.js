@@ -4,7 +4,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Connection
 // ---------------------------------------------------------------------------
 const STORE_KEY = "evas_space_entries_v1";
-const DEMO_MIGRATION_KEY = "evas_space_demo_migrated_v2";
 const VIEW_PREFS_KEY = "evas_space_view_prefs_v1";
 const ESPRESSO_DEFAULTS_KEY = "evas_space_espresso_defaults_v1";
 
@@ -33,181 +32,6 @@ export const archiveTypes = [
   { type: "recipe", label: "Cooked Food", plural: "recipes" },
   { type: "espresso", label: "Espresso", plural: "espresso logs" },
   { type: "archive", label: "Archive", plural: "archive notes" }
-];
-
-// ---------------------------------------------------------------------------
-// Demo data (used as local fallback when Supabase is not configured, and as
-// one-click seed content once Eva is signed in).
-// ---------------------------------------------------------------------------
-export const demoEntries = [
-  {
-    id: "recipe-silk-tomato-rigatoni",
-    type: "recipe",
-    title: "Silk Tomato Rigatoni",
-    slug: "silk-tomato-rigatoni",
-    category: "cooked food",
-    mood: "slow dinner",
-    intro: "A glossy tomato sauce finished with butter, basil, and enough pasta water to make it feel restaurant-level.",
-    date: "2026-06-08",
-    cover_url: "",
-    published: true,
-    servings: "2",
-    prep_time: "10 min",
-    cook_time: "35 min",
-    ingredients: [
-      { name: "rigatoni", amount: "200", unit: "g", category: "pasta", note: "" },
-      { name: "whole tomatoes", amount: "1", unit: "can", category: "pantry", note: "" },
-      { name: "garlic", amount: "2", unit: "cloves", category: "vegetable", note: "sliced" },
-      { name: "olive oil", amount: "1", unit: "tbsp", category: "pantry", note: "" },
-      { name: "butter", amount: "1", unit: "tbsp", category: "dairy", note: "" },
-      { name: "fresh basil", amount: "", unit: "", category: "herb", note: "to finish" },
-      { name: "parmesan", amount: "", unit: "", category: "dairy", note: "finely grated" },
-      { name: "salt", amount: "", unit: "", category: "seasoning", note: "" }
-    ],
-    steps: [
-      "Warm oil and gently toast sliced garlic.",
-      "Crush in the tomatoes and simmer until deep red.",
-      "Cook pasta just shy of al dente.",
-      "Emulsify sauce with pasta water, butter, and parmesan.",
-      "Finish with torn basil and black pepper."
-    ],
-    created_at: "2026-06-08T18:00:00.000Z"
-  },
-  {
-    id: "recipe-lemony-beans-toast",
-    type: "recipe",
-    title: "Lemony Beans on Toast",
-    slug: "lemony-beans-on-toast",
-    category: "cooked food",
-    mood: "bright lunch",
-    intro: "Creamy beans, lemon, herbs, and crisp bread. Quick enough for a normal day, polished enough to remember.",
-    date: "2026-06-04",
-    cover_url: "",
-    published: true,
-    servings: "2",
-    prep_time: "8 min",
-    cook_time: "12 min",
-    ingredients: [
-      { name: "white beans", amount: "1", unit: "jar", category: "pantry", note: "drained" },
-      { name: "lemon", amount: "1", unit: "", category: "fruit", note: "zest and juice" },
-      { name: "shallot", amount: "1", unit: "", category: "vegetable", note: "finely sliced" },
-      { name: "parsley", amount: "", unit: "", category: "herb", note: "chopped" },
-      { name: "sourdough", amount: "2", unit: "slices", category: "bread", note: "" },
-      { name: "olive oil", amount: "", unit: "", category: "pantry", note: "" },
-      { name: "chili flakes", amount: "", unit: "", category: "seasoning", note: "" }
-    ],
-    steps: [
-      "Toast the bread until deeply crisp.",
-      "Soften shallot in olive oil.",
-      "Add beans with a splash of water and mash a few.",
-      "Season with lemon zest, juice, parsley, and chili.",
-      "Spoon over toast and finish with olive oil."
-    ],
-    created_at: "2026-06-04T12:00:00.000Z"
-  },
-  {
-    id: "espresso-honeyed-morning",
-    type: "espresso",
-    title: "Honeyed Morning Shot",
-    slug: "honeyed-morning-shot",
-    category: "espresso itinerary",
-    mood: "balanced",
-    intro: "A rounder extraction after grinding one step finer. More sweetness, less hollow finish.",
-    date: "2026-06-09",
-    cover_url: "",
-    published: true,
-    bean: "Ethiopia Guji",
-    roaster: "Sample roaster",
-    machine: "Espresso machine",
-    grinder: "Home grinder",
-    dose_g: 18,
-    yield_g: 40,
-    time_s: 29,
-    grind_setting: "5.2",
-    water_temp_c: 93,
-    pressure_bar: 9,
-    acidity: 6,
-    sweetness: 8,
-    body: 7,
-    bitterness: 3,
-    rating: 8,
-    notes: "Clear apricot sweetness. Next time try 1 g less yield to tighten the body.",
-    created_at: "2026-06-09T07:30:00.000Z"
-  },
-  {
-    id: "espresso-bright-test",
-    type: "espresso",
-    title: "Bright Test Shot",
-    slug: "bright-test-shot",
-    category: "espresso itinerary",
-    mood: "too sharp",
-    intro: "Useful comparison shot. Fast flow, high acidity, thin texture.",
-    date: "2026-06-07",
-    cover_url: "",
-    published: true,
-    bean: "Ethiopia Guji",
-    roaster: "Sample roaster",
-    machine: "Espresso machine",
-    grinder: "Home grinder",
-    dose_g: 18,
-    yield_g: 42,
-    time_s: 24,
-    grind_setting: "5.8",
-    water_temp_c: 93,
-    pressure_bar: 9,
-    acidity: 8,
-    sweetness: 5,
-    body: 4,
-    bitterness: 2,
-    rating: 5,
-    notes: "Ran too fast. Finer grind should increase contact time and improve sweetness.",
-    created_at: "2026-06-07T07:20:00.000Z"
-  },
-  {
-    id: "espresso-dark-comfort",
-    type: "espresso",
-    title: "Dark Comfort Blend",
-    slug: "dark-comfort-blend",
-    category: "espresso itinerary",
-    mood: "syrupy",
-    intro: "A forgiving blend with chocolate body. Good baseline for milk drinks.",
-    date: "2026-06-02",
-    cover_url: "",
-    published: true,
-    bean: "House blend",
-    roaster: "Sample roaster",
-    machine: "Espresso machine",
-    grinder: "Home grinder",
-    dose_g: 18.5,
-    yield_g: 37,
-    time_s: 31,
-    grind_setting: "4.9",
-    water_temp_c: 92,
-    pressure_bar: 9,
-    acidity: 3,
-    sweetness: 7,
-    body: 9,
-    bitterness: 5,
-    rating: 7,
-    notes: "Thick and chocolatey. A touch bitter at the end; lower temperature by 1 C.",
-    created_at: "2026-06-02T08:10:00.000Z"
-  },
-  {
-    id: "archive-market-notes",
-    type: "archive",
-    title: "Saturday Market Notes",
-    slug: "saturday-market-notes",
-    category: "general archive",
-    topic: "market",
-    mood: "observed",
-    intro: "Small observations, ingredients to remember, and ideas that do not belong to one recipe yet.",
-    date: "2026-06-01",
-    cover_url: "",
-    published: true,
-    tags: ["market", "ideas", "seasonal"],
-    body: "Good strawberries are starting to appear. The herb stand had especially fresh dill and tarragon. Possible idea: lemony potatoes with herbs and a soft egg.",
-    created_at: "2026-06-01T10:00:00.000Z"
-  }
 ];
 
 // ---------------------------------------------------------------------------
@@ -369,8 +193,8 @@ export async function loadEntries(scope = "public") {
       ...archive.data.map(mapArchive)
     ].sort(byDateDesc);
   } catch (error) {
-    console.warn("Eva's Space: Supabase load failed, falling back to demo data.", error);
-    return onlyPublished ? [...demoEntries] : localGetEntries();
+    console.warn("Eva's Space: Supabase load failed.", error);
+    return onlyPublished ? [] : localGetEntries();
   }
 }
 
@@ -466,34 +290,6 @@ export async function deleteEntry(id, type) {
   if (!sb) return localDeleteEntry(id);
   const { error } = await sb.from(tableForType(type)).delete().eq("id", id);
   if (error) throw error;
-}
-
-// One-click sample content for a fresh, signed-in archive.
-export async function seedDemoData() {
-  if (!sb) {
-    resetLocalDemo();
-    return;
-  }
-  const existing = await loadEntries("owner");
-  const slugs = new Set(existing.map(entry => entry.slug));
-  for (const entry of demoEntries) {
-    if (slugs.has(entry.slug)) continue;
-    await upsertEntry({ ...entry, id: undefined });
-  }
-}
-
-// Delete every entry owned by the signed-in account (RLS limits this to Eva's
-// own rows). Recipe children cascade via the foreign key.
-export async function wipeAllEntries() {
-  if (!sb) {
-    resetLocalDemo();
-    return;
-  }
-  const allTime = "1970-01-01";
-  for (const table of ["recipes", "espresso_logs", "archive_entries"]) {
-    const { error } = await sb.from(table).delete().gte("created_at", allTime);
-    if (error) throw error;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -618,18 +414,12 @@ export function saveEspressoDefaults(entry) {
 // ---------------------------------------------------------------------------
 function localGetEntries() {
   const raw = localStorage.getItem(STORE_KEY);
-  if (!raw) return [...demoEntries];
+  if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || !parsed.length) return [...demoEntries];
-    if (localStorage.getItem(DEMO_MIGRATION_KEY)) return parsed;
-    const existingIds = new Set(parsed.map(entry => entry.id));
-    const migrated = [...parsed, ...demoEntries.filter(entry => !existingIds.has(entry.id))];
-    localStorage.setItem(STORE_KEY, JSON.stringify(migrated));
-    localStorage.setItem(DEMO_MIGRATION_KEY, "1");
-    return migrated;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return [...demoEntries];
+    return [];
   }
 }
 
@@ -644,11 +434,6 @@ function localUpsertEntry(entry) {
 
 function localDeleteEntry(id) {
   localStorage.setItem(STORE_KEY, JSON.stringify(localGetEntries().filter(item => item.id !== id)));
-}
-
-function resetLocalDemo() {
-  localStorage.removeItem(STORE_KEY);
-  localStorage.removeItem(DEMO_MIGRATION_KEY);
 }
 
 function localGetViewPrefs() {
