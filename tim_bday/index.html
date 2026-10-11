@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#ffffff">
+<title>Alles Gute zum Geburtstag, Tim!</title>
+<style>
+@font-face { font-family: 'Caveat'; font-weight: 400 700; font-display: swap; src: url('fonts/caveat-latin.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 400; font-display: swap; src: url('../fonts/inter-v19-latin-regular.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 500; font-display: swap; src: url('../fonts/inter-v19-latin-500.woff2') format('woff2'); }
+
+:root {
+    --paper: #ffffff;
+    --ink: #161616;
+    --ink-soft: #7a7a7a;
+    --line: #d9d9d9;
+    --pen: 'Caveat', 'Bradley Hand', cursive;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    /* uneven radius = box drawn by hand */
+    --wonky: 3px 9px 4px 7px / 8px 3px 9px 4px;
+    --wonky-2: 8px 3px 7px 4px / 3px 8px 4px 9px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; }
+body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column; align-items: center;
+    padding: max(36px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+    min-height: 100dvh;
+    overflow-x: hidden;
+    user-select: none; -webkit-user-select: none;
+    position: relative;
+}
+
+/* ---- thin ink outline with a slight hand-drawn wobble ---- */
+.sketch { position: relative; }
+.sketch::before {
+    content: ''; position: absolute; inset: -6px;
+    border: 1.4px solid var(--ink);
+    border-radius: var(--wonky);
+    filter: url(#wobble);
+    pointer-events: none;
+}
+.sketch.double::after {
+    content: ''; position: absolute; inset: -11px -9px -10px -12px;
+    border: 1px solid var(--ink);
+    border-radius: var(--wonky-2);
+    filter: url(#wobble);
+    opacity: .55;
+    pointer-events: none;
+}
+
+/* ---- header ---- */
+header { text-align: center; margin: 0 0 34px; max-width: 460px; position: relative; z-index: 1; }
+h1 {
+    font-family: var(--pen); font-weight: 600;
+    font-size: clamp(40px, 10.5vw, 60px); line-height: 1.05;
+    margin: 0 0 18px;
+}
+h1 .name { position: relative; white-space: nowrap; }
+h1 .name svg { position: absolute; left: -6%; bottom: -6px; width: 112%; height: 12px; overflow: visible; }
+.sub { margin: 0; font-size: 15px; line-height: 1.6; color: #3a3a3a; }
+
+.signature {
+    font-family: var(--pen); font-weight: 500; font-size: 30px; line-height: 1;
+    margin: 30px 0 0; transform: rotate(-2deg); position: relative; z-index: 1;
+}
+
+/* ---- flip card ---- */
+.scene { width: min(84vw, 460px); aspect-ratio: 1; perspective: 1600px; position: relative; z-index: 1; }
+.card {
+    position: relative; width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 1.2s cubic-bezier(.65, 0, .25, 1);
+}
+.card.flipped { transform: rotateY(180deg); }
+.face {
+    position: absolute; inset: 0;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    background: var(--paper);
+}
+.back {
+    transform: rotateY(180deg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 6% 8%; gap: 3.2%;
+    text-align: center;
+}
+
+/* ---- board ---- */
+.board {
+    width: 100%; height: 100%;
+    display: grid; gap: 3px;
+    background: var(--paper);
+    touch-action: none;
+    transition: gap .8s ease;
+}
+.board.solved { gap: 0; }
+.tile {
+    position: relative;
+    background-repeat: no-repeat;
+    cursor: grab;
+    transition: transform .2s ease, opacity .2s ease, box-shadow .2s ease;
+}
+.board.solved .tile { cursor: default; }
+.tile.selected { transform: scale(.9); box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 3px var(--ink); z-index: 2; }
+.tile.dragging {
+    z-index: 10; transition: none; cursor: grabbing;
+    box-shadow: 0 0 0 1.5px var(--paper), 0 0 0 3px var(--ink), 0 14px 28px rgba(0,0,0,.18);
+}
+.tile.drop-target { opacity: .55; }
+.tile.correct-pop { animation: settle .5s ease; }
+@keyframes settle { 0%, 100% { transform: scale(1); } 45% { transform: scale(.94); } }
+
+/* ---- back side ---- */
+.back .label { font-size: 10.5px; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-soft); }
+.back h2 { font-family: var(--pen); font-weight: 600; margin: -1% 0 1%; font-size: clamp(32px, 8.5vw, 46px); line-height: 1; }
+.back .qr { width: 46%; aspect-ratio: 1; padding: 2.5%; }
+.back .qr::before { inset: -2px; }
+.back .qr svg { width: 100%; height: 100%; display: block; }
+.code {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: clamp(12px, 3.4vw, 15px); font-weight: 500; letter-spacing: .08em;
+    background: none; color: var(--ink); border: none;
+    padding: 4px 10px; cursor: pointer;
+    user-select: all; -webkit-user-select: all;
+}
+.code::before { inset: -2px; border-style: dashed; border-width: 1px; }
+.back .hint { font-size: 12px; color: var(--ink-soft); margin: 0; line-height: 1.5; }
+
+/* ---- controls ---- */
+.bar { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 34px; position: relative; z-index: 1; }
+.bar.hidden { visibility: hidden; }
+.actions { display: flex; gap: 22px; align-items: center; }
+.stat { font-size: 12px; letter-spacing: .04em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.btn {
+    font-family: var(--sans); font-size: 14px; font-weight: 500;
+    color: var(--ink); background: var(--paper);
+    border: none; padding: 9px 18px; cursor: pointer;
+    text-decoration: none; display: inline-block;
+    transition: background .15s, color .15s;
+}
+.btn::before { inset: 0; }
+.btn:hover { background: #f4f4f4; }
+.btn:active { transform: translateY(1px); }
+.btn.solid { background: var(--ink); color: var(--paper); border-radius: var(--wonky-2); }
+.hint-line { font-size: 12px; color: var(--ink-soft); margin: 0; text-align: center; }
+
+.peek {
+    position: absolute; inset: 0;
+    background-size: cover; opacity: 0; pointer-events: none; transition: opacity .25s;
+    z-index: 20;
+}
+.peek.on { opacity: 1; }
+
+/* ---- margin marks ---- */
+.marks { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.mark {
+    position: absolute; fill: none; stroke: var(--ink); stroke-width: 1.3;
+    stroke-linecap: round; stroke-linejoin: round;
+    filter: url(#wobble);
+    opacity: .85;
+}
+@media (max-width: 640px) { .mark.wide-only { display: none; } }
+
+/* margin note with arrow, pointing at the board */
+.note {
+    position: absolute; z-index: 1; pointer-events: none;
+    font-family: var(--pen); font-size: 22px; line-height: 1.05; color: var(--ink);
+    right: calc(100% + 26px); top: 18%; width: 150px; text-align: right;
+    transform: rotate(-4deg);
+}
+.note svg { display: block; margin: 6px 0 0 auto; width: 70px; height: 40px; fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-linecap: round; filter: url(#wobble); }
+@media (max-width: 860px) { .note { display: none; } }
+
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+</style>
+</head>
+<body>
+
+<!-- wobble filter: gives straight lines a slight pen-on-paper unevenness -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="wobble">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+</svg>
+
+<div class="marks" aria-hidden="true">
+    <svg class="mark" viewBox="0 0 40 40" style="width:22px; left:12%; top:64px">
+        <path d="M20 4c0 10 6 16 16 16-10 0-16 6-16 16 0-10-6-16-16-16 10 0 16-6 16-16z"/>
+    </svg>
+    <svg class="mark" viewBox="0 0 40 40" style="width:13px; left:calc(12% + 26px); top:52px">
+        <path d="M20 4c0 10 6 16 16 16-10 0-16 6-16 16 0-10-6-16-16-16 10 0 16-6 16-16z"/>
+    </svg>
+    <svg class="mark" viewBox="0 0 40 40" style="width:16px; right:13%; top:150px">
+        <path d="M20 6v28M6 20h28"/>
+    </svg>
+    <svg class="mark wide-only" viewBox="0 0 160 40" style="width:150px; right:9%; bottom:14%">
+        <path d="M4 26c14-18 26-18 30 0s18 14 28-4 22-16 30 2 20 14 30-4 18-12 30 0"/>
+    </svg>
+    <svg class="mark wide-only" viewBox="0 0 40 40" style="width:18px; left:16%; bottom:22%">
+        <path d="M20 4c0 10 6 16 16 16-10 0-16 6-16 16 0-10-6-16-16-16 10 0 16-6 16-16z"/>
+    </svg>
+</div>
+
+<header>
+    <h1>Alles Gute zum Geburtstag, <span class="name"><span class="js-name"></span><svg viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M4 8c46-5 110-6 192-3" fill="none" stroke="#161616" stroke-width="1.6" stroke-linecap="round" style="filter:url(#wobble)"/></svg></span>!</h1>
+    <p class="sub" id="sub"><span class="js-cat"></span> ist leider etwas durcheinander …<br>Setz das Bild wieder zusammen – auf der Rückseite wartet dein Geschenk.</p>
+</header>
+
+<div class="scene">
+    <div class="note" id="note">dahinter steckt<br>etwas für dich
+        <svg viewBox="0 0 70 40"><path d="M4 6c18 2 40 10 56 26M60 32l-1-11M60 32l-11-2"/></svg>
+    </div>
+    <div class="card" id="card">
+        <div class="face front sketch double">
+            <div class="board" id="board"></div>
+            <div class="peek" id="peek"></div>
+        </div>
+        <div class="face back sketch double">
+            <span class="label">Apple Gift Card</span>
+            <h2>Für dich.</h2>
+            <div class="qr sketch" id="qr"></div>
+            <button class="code sketch" id="code" title="Zum Kopieren antippen"></button>
+            <p class="hint" id="hint">QR-Code mit der Kamera scannen oder Code antippen zum Kopieren.</p>
+            <a class="btn solid" id="redeem" target="_blank" rel="noopener">Im App Store einlösen</a>
+        </div>
+    </div>
+</div>
+
+<div class="bar" id="bar">
+    <div class="actions">
+        <button class="btn sketch" id="peekBtn">Spicken</button>
+        <button class="btn sketch" id="shuffleBtn">Neu mischen</button>
+    </div>
+    <span class="stat" id="moves">0 Züge</span>
+    <p class="hint-line">Zwei Teile antippen, um sie zu tauschen – oder eins auf ein anderes ziehen.<br>Zum Spicken gedrückt halten.</p>
+</div>
+
+<p class="signature">Dein Max und Elli</p>
+
+<canvas id="confetti"></canvas>
+
+<script src="qrcode.min.js"></script>
+<script>
+/* =========================== CONFIG ===================================== */
+const CONFIG = {
+    name: 'Tim',
+    cat: 'Mio',
+    image: 'cat.jpg',
+    focusY: 0.03,      // where to crop the square from a tall photo: 0 = top, 0.5 = middle
+    grid: 5,           // 5 = 25 pieces, 6 = 36 pieces
+    // Gift card link + code from the email, lightly scrambled so they aren't
+    // readable in the page source: btoa(JSON.stringify({link, code}).split('').reverse().join(''))
+    secret: 'fSJYWFhYLVhYWFgtWFhYWC1YWFhYIjoiZWRvYyIsIiI6ImtuaWwiew==',
+};
+/* ======================================================================== */
+
+const N = CONFIG.grid;
+const board = document.getElementById('board');
+const movesEl = document.getElementById('moves');
+const sub = document.getElementById('sub');
+let order = [];          // order[slot] = piece index
+let moves = 0;
+let selected = null;
+let solved = false;
+let imgURL = '';
+
+document.querySelectorAll('.js-name').forEach(el => el.textContent = CONFIG.name);
+document.querySelectorAll('.js-cat').forEach(el => el.textContent = CONFIG.cat);
+document.title = `Alles Gute zum Geburtstag, ${CONFIG.name}!`;
+
+// ---- image: crop to a square so pieces line up for any photo ----
+function loadImage() {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            const w = img.naturalWidth, h = img.naturalHeight, s = Math.min(w, h);
+            const size = Math.min(s, 1200);
+            const c = document.createElement('canvas');
+            c.width = c.height = size;
+            c.getContext('2d').drawImage(img, (w - s) / 2, (h - s) * CONFIG.focusY, s, s, 0, 0, size, size);
+            try { resolve(c.toDataURL('image/jpeg', 0.9)); } catch { resolve(CONFIG.image); }
+        };
+        img.onerror = () => resolve(placeholder());
+        img.src = CONFIG.image;
+    });
+}
+
+function placeholder() {
+    const c = document.createElement('canvas');
+    c.width = c.height = 800;
+    const g = c.getContext('2d');
+    g.fillStyle = '#eee'; g.fillRect(0, 0, 800, 800);
+    return c.toDataURL();
+}
+
+// ---- board ----
+function render() {
+    board.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+    board.innerHTML = '';
+    order.forEach((piece, slot) => {
+        const t = document.createElement('div');
+        t.className = 'tile';
+        t.dataset.slot = slot;
+        paintTile(t, piece);
+        board.appendChild(t);
+    });
+}
+
+function paintTile(t, piece) {
+    const r = Math.floor(piece / N), c = piece % N;
+    t.style.backgroundImage = `url(${imgURL})`;
+    t.style.backgroundSize = `${N * 100}% ${N * 100}%`;
+    t.style.backgroundPosition = `${(c / (N - 1)) * 100}% ${(r / (N - 1)) * 100}%`;
+}
+
+function shuffle() {
+    order = [...Array(N * N).keys()];
+    do {
+        for (let i = order.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [order[i], order[j]] = [order[j], order[i]];
+        }
+    } while (order.some((p, i) => p === i));   // no piece starts in its correct spot
+    moves = 0; selected = null; solved = false;
+    updateMoves();
+    render();
+}
+
+function swap(a, b) {
+    if (a === b) return;
+    [order[a], order[b]] = [order[b], order[a]];
+    const tiles = board.children;
+    paintTile(tiles[a], order[a]);
+    paintTile(tiles[b], order[b]);
+    for (const s of [a, b]) {
+        if (order[s] === s) {
+            tiles[s].classList.remove('correct-pop'); void tiles[s].offsetWidth;
+            tiles[s].classList.add('correct-pop');
+        }
+    }
+    moves++; updateMoves();
+    if (order.every((p, i) => p === i)) win();
+}
+
+function updateMoves() {
+    const right = order.filter((p, i) => p === i).length;
+    movesEl.textContent = `${moves} ${moves === 1 ? 'Zug' : 'Züge'}  ·  ${right} von ${N * N} richtig`;
+}
+
+// ---- input: tap-to-swap and drag-to-swap via pointer events ----
+let drag = null;
+
+board.addEventListener('pointerdown', e => {
+    const t = e.target.closest('.tile');
+    if (!t || solved) return;
+    t.setPointerCapture(e.pointerId);
+    drag = { t, slot: +t.dataset.slot, x: e.clientX, y: e.clientY, moved: false, over: null };
+});
+
+board.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 8) return;
+    if (!drag.moved) {
+        drag.moved = true;
+        clearSelection();
+        drag.t.classList.add('dragging');
+    }
+    drag.t.style.transform = `translate(${dx}px, ${dy}px) scale(1.04)`;
+    const over = tileAt(e.clientX, e.clientY);
+    if (over !== drag.over) {
+        drag.over?.classList.remove('drop-target');
+        drag.over = over && over !== drag.t ? over : null;
+        drag.over?.classList.add('drop-target');
+    }
+});
+
+function endDrag(e) {
+    if (!drag) return;
+    const { t, slot, moved, over } = drag;
+    drag = null;
+    t.classList.remove('dragging');
+    t.style.transform = '';
+    over?.classList.remove('drop-target');
+    if (e.type === 'pointercancel') return;
+    if (moved) {
+        if (over) swap(slot, +over.dataset.slot);
+        return;
+    }
+    // tap
+    if (selected === null) {
+        selected = slot; t.classList.add('selected');
+    } else if (selected === slot) {
+        clearSelection();
+    } else {
+        const a = selected; clearSelection(); swap(a, slot);
+    }
+}
+board.addEventListener('pointerup', endDrag);
+board.addEventListener('pointercancel', endDrag);
+
+function tileAt(x, y) {
+    // the dragged tile follows the finger, so look underneath it
+    return document.elementsFromPoint(x, y)
+        .find(el => el.classList?.contains('tile') && !el.classList.contains('dragging')) || null;
+}
+
+function clearSelection() {
+    if (selected !== null) board.children[selected]?.classList.remove('selected');
+    selected = null;
+}
+
+// ---- peek ----
+const peek = document.getElementById('peek');
+const peekBtn = document.getElementById('peekBtn');
+const peekOn = () => { if (!solved) peek.classList.add('on'); };
+const peekOff = () => peek.classList.remove('on');
+peekBtn.addEventListener('pointerdown', peekOn);
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => peekBtn.addEventListener(ev, peekOff));
+peekBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+document.getElementById('shuffleBtn').addEventListener('click', () => {
+    if (!solved && (moves === 0 || confirm('Wirklich neu mischen? Der Fortschritt geht verloren.'))) shuffle();
+});
+
+// ---- win ----
+function revealPrize() {
+    const { link, code } = JSON.parse(atob(CONFIG.secret).split('').reverse().join(''));
+    const url = link || `https://apps.apple.com/redeem?code=${code}`;
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    document.getElementById('qr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    document.getElementById('redeem').href = url;
+    const btn = document.getElementById('code');
+    btn.textContent = code;
+    btn.onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(code.replace(/[\s-]/g, ''));
+            document.getElementById('hint').textContent = 'Kopiert.';
+        } catch {}
+    };
+}
+
+function win() {
+    solved = true;
+    clearSelection();
+    revealPrize();
+    board.classList.add('solved');
+    document.getElementById('bar').classList.add('hidden');
+    document.getElementById('note').style.visibility = 'hidden';
+    sub.textContent = `Da ist ${CONFIG.cat} ja wieder. Gelöst in ${moves} Zügen.`;
+    setTimeout(() => {
+        document.getElementById('card').classList.add('flipped');
+        sub.innerHTML = `Alles Gute zum Geburtstag, ${CONFIG.name}.<br>Hoffentlich findest du etwas Gutes für dich hier!`;
+        setTimeout(confetti, 700);
+    }, 2200);
+}
+
+// ---- confetti: a quiet drift of thin ink marks ----
+function confetti() {
+    const cv = document.getElementById('confetti');
+    const ctx = cv.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle = '#161616';
+    ctx.lineWidth = 1.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const shapes = ['sparkle', 'plus', 'dash', 'ring'];
+    const parts = Array.from({ length: 46 }, () => ({
+        x: Math.random() * innerWidth,
+        y: -20 - Math.random() * innerHeight * .6,
+        vy: .7 + Math.random() * 1.1,
+        sway: Math.random() * Math.PI * 2,
+        s: 4 + Math.random() * 5,
+        r: Math.random() * Math.PI, vr: (Math.random() - .5) * .02,
+        k: shapes[Math.floor(Math.random() * shapes.length)],
+    }));
+    const draw = (p) => {
+        const s = p.s;
+        ctx.beginPath();
+        if (p.k === 'sparkle') {
+            ctx.moveTo(0, -s);
+            ctx.quadraticCurveTo(0, 0, s, 0); ctx.quadraticCurveTo(0, 0, 0, s);
+            ctx.quadraticCurveTo(0, 0, -s, 0); ctx.quadraticCurveTo(0, 0, 0, -s);
+        } else if (p.k === 'plus') {
+            ctx.moveTo(-s * .7, 0); ctx.lineTo(s * .7, 0); ctx.moveTo(0, -s * .7); ctx.lineTo(0, s * .7);
+        } else if (p.k === 'dash') {
+            ctx.moveTo(-s, 0); ctx.quadraticCurveTo(0, -s * .4, s, 0);
+        } else {
+            ctx.arc(0, 0, s * .45, 0, Math.PI * 2);
+        }
+        ctx.stroke();
+    };
+    const start = performance.now();
+    (function frame(now) {
+        const t = now - start;
+        ctx.clearRect(0, 0, innerWidth, innerHeight);
+        ctx.globalAlpha = t > 6000 ? Math.max(0, 1 - (t - 6000) / 1500) : 1;
+        for (const p of parts) {
+            p.y += p.vy; p.sway += .02; p.r += p.vr;
+            ctx.save(); ctx.translate(p.x + Math.sin(p.sway) * 14, p.y); ctx.rotate(p.r); draw(p); ctx.restore();
+        }
+        if (t < 7500) requestAnimationFrame(frame);
+        else ctx.clearRect(0, 0, innerWidth, innerHeight);
+    })(start);
+}
+
+// ---- go ----
+loadImage().then(url => {
+    imgURL = url;
+    peek.style.backgroundImage = `url(${url})`;
+    shuffle();
+});
+</script>
+</body>
+</html>
