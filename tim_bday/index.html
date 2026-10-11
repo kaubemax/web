@@ -260,7 +260,7 @@ const CONFIG = {
     peeks: 4,          // peeks per round; afterwards only "new picture" helps
     // Gift card link + code from the email, lightly scrambled so they aren't
     // readable in the page source: btoa(JSON.stringify({link, code}).split('').reverse().join(''))
-    secret: 'fSJYWFhYLVhYWFgtWFhYWC1YWFhYIjoiZWRvYyIsIiI6ImtuaWwiew==',
+    secret: 'fSI3V1FSIDRKRk0gSDhRVyBYVEtYIjoiZWRvYyIsIiI6ImtuaWwiew==',
 };
 /* ======================================================================== */
 
@@ -467,7 +467,7 @@ shuffleBtn.addEventListener('click', () => {
 // ---- win ----
 function revealPrize() {
     const { link, code } = JSON.parse(atob(CONFIG.secret).split('').reverse().join(''));
-    const url = link || `https://apps.apple.com/redeem?code=${code}`;
+    const url = link || `https://apps.apple.com/redeem?code=${code.replace(/\s/g, "")}`;
     const qr = qrcode(0, 'M');
     qr.addData(url);
     qr.make();
