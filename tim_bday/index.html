@@ -136,7 +136,7 @@ h1 .name svg { position: absolute; left: -6%; bottom: -6px; width: 112%; height:
 /* ---- controls ---- */
 .bar { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 34px; position: relative; z-index: 1; }
 .bar.hidden { visibility: hidden; }
-.actions { display: flex; gap: 22px; align-items: center; }
+.actions { display: flex; gap: 14px 22px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .stat { font-size: 12px; letter-spacing: .04em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .btn {
     font-family: var(--sans); font-size: 14px; font-weight: 500;
@@ -149,6 +149,8 @@ h1 .name svg { position: absolute; left: -6%; bottom: -6px; width: 112%; height:
 .btn:hover { background: #f4f4f4; }
 .btn:active { transform: translateY(1px); }
 .btn.solid { background: var(--ink); color: var(--paper); border-radius: var(--wonky-2); }
+.btn:disabled { color: var(--ink-soft); cursor: default; background: var(--paper); }
+.btn:disabled::before { border-style: dashed; opacity: .5; }
 .hint-line { font-size: 12px; color: var(--ink-soft); margin: 0; text-align: center; }
 
 .peek {
@@ -236,11 +238,11 @@ h1 .name svg { position: absolute; left: -6%; bottom: -6px; width: 112%; height:
 
 <div class="bar" id="bar">
     <div class="actions">
-        <button class="btn sketch" id="peekBtn">Spicken</button>
-        <button class="btn sketch" id="shuffleBtn">Neu mischen</button>
+        <button class="btn sketch" id="peekBtn">Spicken (4×)</button>
+        <button class="btn sketch" id="shuffleBtn">Neues Bild &amp; neu mischen</button>
     </div>
     <span class="stat" id="moves">0 Züge</span>
-    <p class="hint-line">Zwei Teile antippen, um sie zu tauschen – oder eins auf ein anderes ziehen.<br>Zum Spicken gedrückt halten.</p>
+    <p class="hint-line">Zwei Teile antippen, um sie zu tauschen – oder eins auf ein anderes ziehen.<br>Spicken (gedrückt halten) geht viermal – danach hilft nur noch ein neues Bild.</p>
 </div>
 
 <p class="signature">Dein Max und Elli</p>
@@ -253,9 +255,9 @@ h1 .name svg { position: absolute; left: -6%; bottom: -6px; width: 112%; height:
 const CONFIG = {
     name: 'Tim',
     cat: 'Mio',
-    image: 'cat.jpg',
-    focusY: 0.03,      // where to crop the square from a tall photo: 0 = top, 0.5 = middle
-    grid: 5,           // 5 = 25 pieces, 6 = 36 pieces
+    images: ['mio-1.jpg', 'mio-2.jpg', 'mio-3.jpg'],   // square photos, one is picked per round
+    grid: 6,           // 6 = 36 pieces
+    peeks: 4,          // peeks per round; afterwards only "new picture" helps
     // Gift card link + code from the email, lightly scrambled so they aren't
     // readable in the page source: btoa(JSON.stringify({link, code}).split('').reverse().join(''))
     secret: 'fSJYWFhYLVhYWFgtWFhYWC1YWFhYIjoiZWRvYyIsIiI6ImtuaWwiew==',
@@ -271,13 +273,15 @@ let moves = 0;
 let selected = null;
 let solved = false;
 let imgURL = '';
+let imgIndex = -1;
+let peeksLeft = CONFIG.peeks;
 
 document.querySelectorAll('.js-name').forEach(el => el.textContent = CONFIG.name);
 document.querySelectorAll('.js-cat').forEach(el => el.textContent = CONFIG.cat);
 document.title = `Alles Gute zum Geburtstag, ${CONFIG.name}!`;
 
 // ---- image: crop to a square so pieces line up for any photo ----
-function loadImage() {
+function loadImage(src) {
     return new Promise(resolve => {
         const img = new Image();
         img.onload = () => {
@@ -285,11 +289,11 @@ function loadImage() {
             const size = Math.min(s, 1200);
             const c = document.createElement('canvas');
             c.width = c.height = size;
-            c.getContext('2d').drawImage(img, (w - s) / 2, (h - s) * CONFIG.focusY, s, s, 0, 0, size, size);
-            try { resolve(c.toDataURL('image/jpeg', 0.9)); } catch { resolve(CONFIG.image); }
+            c.getContext('2d').drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, size, size);
+            try { resolve(c.toDataURL('image/jpeg', 0.9)); } catch { resolve(src); }
         };
         img.onerror = () => resolve(placeholder());
-        img.src = CONFIG.image;
+        img.src = src;
     });
 }
 
@@ -418,17 +422,46 @@ function clearSelection() {
     selected = null;
 }
 
-// ---- peek ----
+// ---- peek: limited per round ----
 const peek = document.getElementById('peek');
 const peekBtn = document.getElementById('peekBtn');
-const peekOn = () => { if (!solved) peek.classList.add('on'); };
-const peekOff = () => peek.classList.remove('on');
+const shuffleBtn = document.getElementById('shuffleBtn');
+
+function updatePeekBtn() {
+    peekBtn.disabled = peeksLeft === 0;
+    peekBtn.textContent = peeksLeft > 0 ? `Spicken (${peeksLeft}×)` : 'Nicht mehr spicken';
+    shuffleBtn.classList.toggle('solid', peeksLeft === 0);
+}
+
+const peekOn = () => {
+    if (solved || peeksLeft === 0 || peek.classList.contains('on')) return;
+    peeksLeft--;
+    peek.classList.add('on');
+};
+const peekOff = () => {
+    if (!peek.classList.contains('on')) return;
+    peek.classList.remove('on');
+    updatePeekBtn();
+};
 peekBtn.addEventListener('pointerdown', peekOn);
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => peekBtn.addEventListener(ev, peekOff));
 peekBtn.addEventListener('contextmenu', e => e.preventDefault());
 
-document.getElementById('shuffleBtn').addEventListener('click', () => {
-    if (!solved && (moves === 0 || confirm('Wirklich neu mischen? Der Fortschritt geht verloren.'))) shuffle();
+// new round: a different photo of the cat, fresh shuffle, peeks refilled
+async function newRound() {
+    const imgs = CONFIG.images;
+    let next = Math.floor(Math.random() * imgs.length);
+    if (imgs.length > 1) while (next === imgIndex) next = Math.floor(Math.random() * imgs.length);
+    imgIndex = next;
+    imgURL = await loadImage(imgs[imgIndex]);
+    peek.style.backgroundImage = `url(${imgURL})`;
+    peeksLeft = CONFIG.peeks;
+    updatePeekBtn();
+    shuffle();
+}
+
+shuffleBtn.addEventListener('click', () => {
+    if (!solved && (moves === 0 || confirm('Neu mischen mit einem neuen Bild? Der Fortschritt geht verloren.'))) newRound();
 });
 
 // ---- win ----
@@ -515,11 +548,7 @@ function confetti() {
 }
 
 // ---- go ----
-loadImage().then(url => {
-    imgURL = url;
-    peek.style.backgroundImage = `url(${url})`;
-    shuffle();
-});
+newRound();
 </script>
 </body>
 </html>
